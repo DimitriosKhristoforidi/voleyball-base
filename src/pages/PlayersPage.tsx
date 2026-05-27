@@ -10,7 +10,7 @@ import { PositionChips } from "@/components/players/PositionChips";
 import { playersService } from "@/services/playersService";
 import type { Player, PlayerInsert } from "@/types/domain";
 
-export function PlayersPage() {
+export default function PlayersPage() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -142,7 +142,7 @@ export function PlayersPage() {
                     <Table.Cell>
                       <TelegramCell player={player} />
                     </Table.Cell>
-                    <Table.Cell>{player.phone ?? "—"}</Table.Cell>
+                    <Table.Cell>{player.phone ?? "-"}</Table.Cell>
                     <Table.Cell>
                       <PositionChips positions={player.positions} />
                     </Table.Cell>
@@ -217,7 +217,7 @@ export function PlayersPage() {
 
 function TelegramCell({ player }: { player: Player }) {
   const url = telegramHref(player);
-  const label = player.telegram_username || player.telegram_url || "—";
+  const label = player.telegram_username || player.telegram_url || "-";
   if (!url) return <span>{label}</span>;
   return (
     <HeroLink href={url} target="_blank" rel="noreferrer noopener">

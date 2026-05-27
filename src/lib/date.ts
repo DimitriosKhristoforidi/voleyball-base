@@ -38,7 +38,7 @@ export function todayISO(): string {
 
 /** Format a YYYY-MM-DD date to e.g. "Суббота, 15 марта 2026". */
 export function formatDateRu(isoDate: string | null | undefined): string {
-  if (!isoDate) return "—";
+  if (!isoDate) return "-";
   const [y, m, d] = isoDate.split("-").map(Number);
   if (!y || !m || !d) return isoDate;
   const date = new Date(y, m - 1, d);
@@ -47,7 +47,7 @@ export function formatDateRu(isoDate: string | null | undefined): string {
 
 /** Short variant: "15 марта". */
 export function formatDateShortRu(isoDate: string | null | undefined): string {
-  if (!isoDate) return "—";
+  if (!isoDate) return "-";
   const [y, m, d] = isoDate.split("-").map(Number);
   if (!y || !m || !d) return isoDate;
   return `${d} ${MONTHS_RU[m - 1]}`;
@@ -102,7 +102,7 @@ function parseTimeMinutes(time: string | null | undefined): number | null {
 
 /** Format a minute count as "Хч Yмин" / "X ч" / "Y мин". */
 export function formatMinutesRu(minutes: number | null | undefined): string {
-  if (minutes == null || !Number.isFinite(minutes) || minutes <= 0) return "—";
+  if (minutes == null || !Number.isFinite(minutes) || minutes <= 0) return "-";
   const h = Math.floor(minutes / 60);
   const m = minutes - h * 60;
   if (h > 0 && m > 0) return `${h} ч ${m} мин`;

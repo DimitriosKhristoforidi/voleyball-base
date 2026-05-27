@@ -3,7 +3,7 @@ import { Button, Card } from "@heroui/react";
 import { AppInput } from "@/components/ui/AppField";
 import { useAuth } from "@/lib/auth";
 
-export function LoginPage() {
+export default function LoginPage() {
   const { signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -49,7 +49,12 @@ export function LoginPage() {
               isRequired
             />
             {error && <div className="text-sm text-danger">{error}</div>}
-            <Button variant="primary" type="submit" isPending={loading} fullWidth>
+            <Button
+              variant="primary"
+              type="submit"
+              isPending={loading}
+              fullWidth
+            >
               Войти
             </Button>
           </form>

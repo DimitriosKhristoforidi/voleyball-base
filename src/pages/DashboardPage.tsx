@@ -6,10 +6,7 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { LoadingState } from "@/components/common/LoadingState";
 import { EmptyState } from "@/components/common/EmptyState";
 import { GameStatusChip } from "@/components/common/StatusChips";
-import {
-  gameParticipantsService,
-  gamesService,
-} from "@/services/gamesService";
+import { gameParticipantsService, gamesService } from "@/services/gamesService";
 import { playersService } from "@/services/playersService";
 import { formatDateShortRu, formatTimeRange } from "@/lib/date";
 import type {
@@ -24,7 +21,7 @@ interface DashboardData {
   unpaid: ParticipantWithPlayer[];
 }
 
-export function DashboardPage() {
+export default function DashboardPage() {
   const navigate = useNavigate();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -87,7 +84,7 @@ export function DashboardPage() {
                   nextGame.start_time,
                   nextGame.end_time,
                 )}`
-              : "—"
+              : "-"
           }
         />
       </div>
@@ -129,12 +126,14 @@ export function DashboardPage() {
                     <Table.Body>
                       {data.upcoming.map((g) => (
                         <Table.Row key={g.id}>
-                          <Table.Cell>{formatDateShortRu(g.game_date)}</Table.Cell>
+                          <Table.Cell>
+                            {formatDateShortRu(g.game_date)}
+                          </Table.Cell>
                           <Table.Cell>
                             {formatTimeRange(g.start_time, g.end_time)}
                           </Table.Cell>
-                          <Table.Cell>{g.title ?? "—"}</Table.Cell>
-                          <Table.Cell>{g.venue?.name ?? "—"}</Table.Cell>
+                          <Table.Cell>{g.title ?? "-"}</Table.Cell>
+                          <Table.Cell>{g.venue?.name ?? "-"}</Table.Cell>
                           <Table.Cell>
                             <GameStatusChip status={g.status} />
                           </Table.Cell>

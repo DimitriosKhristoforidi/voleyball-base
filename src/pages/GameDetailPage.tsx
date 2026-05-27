@@ -1,12 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import {
-  Button,
-  Card,
-  Input,
-  Link as HeroLink,
-  Table,
-} from "@heroui/react";
+import { Button, Card, Input, Link as HeroLink, Table } from "@heroui/react";
 
 import { PageHeader } from "@/components/common/PageHeader";
 import { LoadingState } from "@/components/common/LoadingState";
@@ -22,10 +16,7 @@ import { AppCheckbox } from "@/components/ui/AppCheckbox";
 import { AppSelect } from "@/components/ui/AppSelect";
 import { AddParticipantsModal } from "@/components/games/AddParticipantsModal";
 import { TelegramMessageModal } from "@/components/games/TelegramMessageModal";
-import {
-  gameParticipantsService,
-  gamesService,
-} from "@/services/gamesService";
+import { gameParticipantsService, gamesService } from "@/services/gamesService";
 import { playersService } from "@/services/playersService";
 import { formatDateRu, formatMinutesRu, formatTimeRange } from "@/lib/date";
 import {
@@ -59,7 +50,7 @@ const PAYMENT_OPTIONS = PAYMENT_METHODS.map((m) => ({
   label: PAYMENT_METHOD_LABEL_RU[m],
 }));
 
-export function GameDetailPage() {
+export default function GameDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
@@ -180,11 +171,7 @@ export function GameDetailPage() {
   }
 
   function handleBillableToggle(p: ParticipantWithPlayer, value: boolean) {
-    void patchParticipant(
-      p.id,
-      { is_billable: value },
-      { is_billable: value },
-    );
+    void patchParticipant(p.id, { is_billable: value }, { is_billable: value });
   }
 
   function handlePlayedHoursBlur(p: ParticipantWithPlayer, rawValue: string) {
@@ -301,7 +288,7 @@ export function GameDetailPage() {
         </InfoCard>
         <InfoCard label="Площадка">
           <div className="text-sm">
-            {game.venue?.name ?? "—"}
+            {game.venue?.name ?? "-"}
             {game.venue?.address && (
               <div className="text-xs text-muted">{game.venue.address}</div>
             )}
@@ -329,12 +316,10 @@ export function GameDetailPage() {
           <div className="text-sm">
             {game.total_cost != null
               ? `${formatAmount(game.total_cost)} ${currency}`
-              : "—"}
+              : "-"}
           </div>
           {game.cost_source === "venue_auto" && game.total_cost != null && (
-            <div className="text-xs text-accent">
-              Авто из цены площадки
-            </div>
+            <div className="text-xs text-accent">Авто из цены площадки</div>
           )}
         </InfoCard>
       </div>
@@ -346,7 +331,7 @@ export function GameDetailPage() {
           value={
             game.total_cost != null
               ? `${formatAmount(game.total_cost)} ${currency}`
-              : "—"
+              : "-"
           }
         />
         <SummaryStat
@@ -363,7 +348,7 @@ export function GameDetailPage() {
           value={
             breakdown.remaining != null
               ? `${formatAmount(breakdown.remaining)} ${currency}`
-              : "—"
+              : "-"
           }
           tone={
             breakdown.remaining != null && breakdown.remaining > 0
@@ -399,10 +384,7 @@ export function GameDetailPage() {
       ) : (
         <Table>
           <Table.ScrollContainer>
-            <Table.Content
-              aria-label="Участники"
-              className="min-w-[1400px]"
-            >
+            <Table.Content aria-label="Участники" className="min-w-[1400px]">
               <Table.Header>
                 <Table.Column isRowHeader>Игрок</Table.Column>
                 <Table.Column>Позиции</Table.Column>
@@ -438,9 +420,7 @@ export function GameDetailPage() {
                           <AppSelect<ParticipantStatus>
                             ariaLabel="Статус"
                             value={p.status}
-                            onChange={(v) =>
-                              v && handleStatusChange(p, v)
-                            }
+                            onChange={(v) => v && handleStatusChange(p, v)}
                             options={STATUS_OPTIONS}
                             variant="secondary"
                             renderValue={(v) =>
@@ -493,7 +473,7 @@ export function GameDetailPage() {
                       <Table.Cell>
                         {calc?.is_billable && calc.owed_amount > 0
                           ? `${formatAmount(calc.owed_amount)} ${currency}`
-                          : "—"}
+                          : "-"}
                       </Table.Cell>
                       <Table.Cell>
                         <AppCheckbox
@@ -541,14 +521,14 @@ export function GameDetailPage() {
                             options={PAYMENT_OPTIONS}
                             isDisabled={!p.has_paid}
                             variant="secondary"
-                            placeholder="—"
+                            placeholder="-"
                           />
                         </div>
                       </Table.Cell>
                       <Table.Cell>
                         {calc?.is_billable
                           ? `${formatAmount(calc.remaining_amount)} ${currency}`
-                          : "—"}
+                          : "-"}
                       </Table.Cell>
                       <Table.Cell>
                         {calc && (
@@ -651,7 +631,7 @@ function SummaryStat({ label, value, tone = "default" }: SummaryStatProps) {
 function TelegramInline({ player }: { player: Player }) {
   const url = telegramHref(player);
   const label = player.telegram_username || "";
-  if (!url || !label) return <span>—</span>;
+  if (!url || !label) return <span>-</span>;
   return (
     <HeroLink href={url} target="_blank" rel="noreferrer noopener">
       {label}

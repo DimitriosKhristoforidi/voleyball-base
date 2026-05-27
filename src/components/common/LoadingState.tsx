@@ -8,3 +8,11 @@ export function LoadingState({ label = "Загрузка..." }: { label?: string
     </div>
   );
 }
+
+export function LoadingStateScreen() {
+  return (
+    <div className="flex h-screen w-full items-center justify-center">
+      <LoadingState />
+    </div>
+  );
+}

@@ -115,7 +115,7 @@ export interface CostBreakdown {
  * total cost and each participant's played minutes.
  *
  * The function is safe to call with a partially-filled game (no total_cost,
- * no end_time, etc.) — fields default to 0 / null as appropriate.
+ * no end_time, etc.) - fields default to 0 / null as appropriate.
  */
 export function calculateParticipantPayments(game: GameDetail): CostBreakdown {
   const duration = getGameDurationMinutes(game);
@@ -127,7 +127,7 @@ export function calculateParticipantPayments(game: GameDetail): CostBreakdown {
     const billable = isParticipantBillable(p);
     const minutes = billable
       ? effectivePlayedMinutes(p, duration)
-      : p.played_minutes ?? 0;
+      : (p.played_minutes ?? 0);
     return { p, billable, minutes };
   });
 
@@ -140,35 +140,37 @@ export function calculateParticipantPayments(game: GameDetail): CostBreakdown {
   // 2. Compute owed amount per participant proportionally.
   // We compute on the unrounded float for stability, then round amounts for
   // display only.
-  const rows: ParticipantPayment[] = enriched.map(({ p, billable, minutes }) => {
-    let owed = 0;
-    if (billable && totalCost != null && totalBillableMinutes > 0) {
-      owed = (totalCost * minutes) / totalBillableMinutes;
-    }
-    const paid = Number(p.paid_amount ?? 0);
-    const remaining = Math.max(0, owed - paid);
-    const status = derivePaymentStatus({
-      owed,
-      paid,
-      has_paid: p.has_paid,
-      billable,
-    });
+  const rows: ParticipantPayment[] = enriched.map(
+    ({ p, billable, minutes }) => {
+      let owed = 0;
+      if (billable && totalCost != null && totalBillableMinutes > 0) {
+        owed = (totalCost * minutes) / totalBillableMinutes;
+      }
+      const paid = Number(p.paid_amount ?? 0);
+      const remaining = Math.max(0, owed - paid);
+      const status = derivePaymentStatus({
+        owed,
+        paid,
+        has_paid: p.has_paid,
+        billable,
+      });
 
-    return {
-      participant_id: p.id,
-      player_id: p.player_id,
-      player_name: p.player.full_name,
-      status: p.status,
-      is_billable: billable,
-      played_minutes: minutes,
-      played_minutes_raw: p.played_minutes,
-      owed_amount: round2(owed),
-      paid_amount: round2(paid),
-      remaining_amount: round2(remaining),
-      has_paid: p.has_paid,
-      payment_status: status,
-    };
-  });
+      return {
+        participant_id: p.id,
+        player_id: p.player_id,
+        player_name: p.player.full_name,
+        status: p.status,
+        is_billable: billable,
+        played_minutes: minutes,
+        played_minutes_raw: p.played_minutes,
+        owed_amount: round2(owed),
+        paid_amount: round2(paid),
+        remaining_amount: round2(remaining),
+        has_paid: p.has_paid,
+        payment_status: status,
+      };
+    },
+  );
 
   const collected = rows.reduce((acc, r) => acc + r.paid_amount, 0);
   const remaining =

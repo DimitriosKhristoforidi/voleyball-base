@@ -79,7 +79,7 @@ create policy players_admin_only on public.players
    VITE_SUPABASE_ANON_KEY=<publishable-or-anon-key>
    ```
 
-   Use the publishable key (`sb_publishable_...`) — never the
+   Use the publishable key (`sb_publishable_...`) - never the
    `service_role` key in a frontend app.
 
 3. Create an admin user in Supabase Auth (Dashboard →
@@ -101,29 +101,29 @@ create policy players_admin_only on public.players
 
 ## Scripts
 
-| Script             | What it does                  |
-| ------------------ | ----------------------------- |
-| `npm run dev`      | Vite dev server               |
-| `npm run build`    | Type-check + production build |
-| `npm run preview`  | Serve built app locally       |
-| `npm run typecheck`| `tsc -b --noEmit`             |
+| Script              | What it does                  |
+| ------------------- | ----------------------------- |
+| `npm run dev`       | Vite dev server               |
+| `npm run build`     | Type-check + production build |
+| `npm run preview`   | Serve built app locally       |
+| `npm run typecheck` | `tsc -b --noEmit`             |
 
 ## Features
 
-- **Dashboard** — upcoming games count, active players count,
+- **Dashboard** - upcoming games count, active players count,
   unpaid participants, next game summary, table of upcoming games.
-- **Players** — create / edit / soft-deactivate (no hard delete
+- **Players** - create / edit / soft-deactivate (no hard delete
   if the player has games), search by name / Telegram / phone,
   clickable Telegram link.
-- **Venues** — create / edit / delete (delete is blocked by FK if
+- **Venues** - create / edit / delete (delete is blocked by FK if
   any game references the venue), clickable map URL.
-- **Games** — list with status + period filters, create / edit /
+- **Games** - list with status + period filters, create / edit /
   delete; cancelled games are visually dimmed.
-- **Game detail** — venue/time/price/totals cards, participants
+- **Game detail** - venue/time/price/totals cards, participants
   table with inline editing for status, attended/absent, paid +
   amount + method + note; add active players in bulk (no
   duplicates).
-- **Telegram message** — generates a Russian message based on
+- **Telegram message** - generates a Russian message based on
   the game, venue and confirmed/attended participants; copy
   button.
 

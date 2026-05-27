@@ -36,7 +36,7 @@ const STATUS_OPTIONS: { id: StatusFilter; label: string }[] = [
   ...GAME_STATUSES.map((s) => ({ id: s, label: GAME_STATUS_LABEL_RU[s] })),
 ];
 
-export function GamesPage() {
+export default function GamesPage() {
   const navigate = useNavigate();
   const [games, setGames] = useState<GameWithVenue[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
@@ -172,12 +172,12 @@ export function GamesPage() {
                     <Table.Cell>
                       {formatTimeRange(g.start_time, g.end_time)}
                     </Table.Cell>
-                    <Table.Cell>{g.title ?? "—"}</Table.Cell>
-                    <Table.Cell>{g.venue?.name ?? "—"}</Table.Cell>
+                    <Table.Cell>{g.title ?? "-"}</Table.Cell>
+                    <Table.Cell>{g.venue?.name ?? "-"}</Table.Cell>
                     <Table.Cell>
                       {g.total_cost != null
                         ? `${formatAmount(g.total_cost)} ${g.venue?.currency ?? "KGS"}`
-                        : "—"}
+                        : "-"}
                     </Table.Cell>
                     <Table.Cell>
                       <GameStatusChip status={g.status} />

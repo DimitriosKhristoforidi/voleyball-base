@@ -10,7 +10,7 @@ import { venuesService } from "@/services/venuesService";
 import { formatAmount } from "@/lib/payments";
 import type { Venue, VenueInsert } from "@/types/domain";
 
-export function VenuesPage() {
+export default function VenuesPage() {
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -128,11 +128,11 @@ export function VenuesPage() {
                         <div className="text-xs text-muted">{v.notes}</div>
                       )}
                     </Table.Cell>
-                    <Table.Cell>{v.address ?? "—"}</Table.Cell>
+                    <Table.Cell>{v.address ?? "-"}</Table.Cell>
                     <Table.Cell>
                       {v.hourly_price != null
                         ? `${formatAmount(v.hourly_price)} ${v.currency}`
-                        : "—"}
+                        : "-"}
                     </Table.Cell>
                     <Table.Cell>
                       {v.map_url ? (
@@ -145,7 +145,7 @@ export function VenuesPage() {
                           <HeroLink.Icon />
                         </HeroLink>
                       ) : (
-                        "—"
+                        "-"
                       )}
                     </Table.Cell>
                     <Table.Cell>

@@ -1,8 +1,5 @@
 import { Chip } from "@heroui/react";
-import {
-  PLAYER_POSITION_LABEL_RU,
-  isPlayerPosition,
-} from "@/types/domain";
+import { PLAYER_POSITION_LABEL_RU, isPlayerPosition } from "@/types/domain";
 
 interface PositionChipsProps {
   positions: string[] | null | undefined;
@@ -20,7 +17,7 @@ export function PositionChips({
   className,
 }: PositionChipsProps) {
   if (!positions || positions.length === 0) {
-    return <span className="text-xs text-muted">—</span>;
+    return <span className="text-xs text-muted">-</span>;
   }
   return (
     <div className={`flex flex-wrap gap-1 ${className ?? ""}`.trim()}>

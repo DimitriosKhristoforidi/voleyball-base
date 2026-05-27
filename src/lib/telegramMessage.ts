@@ -72,7 +72,7 @@ export function buildTelegramMessage(
   lines.push("");
   lines.push(`Участники (${eligible.length}):`);
   if (eligible.length === 0) {
-    lines.push("— пока никого нет");
+    lines.push("- пока никого нет");
   } else {
     eligible.forEach((p, i) => {
       lines.push(`${i + 1}. ${displayName(p)}`);
@@ -99,7 +99,9 @@ export function buildTelegramMessage(
       billableConfirmed,
     );
     if (approxPerPerson != null) {
-      lines.push(`Примерно с человека: ${formatAmount(approxPerPerson)} ${currency}`);
+      lines.push(
+        `Примерно с человека: ${formatAmount(approxPerPerson)} ${currency}`,
+      );
     }
   }
 
