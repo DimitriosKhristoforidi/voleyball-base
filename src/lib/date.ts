@@ -74,3 +74,38 @@ export function formatTimeRange(
 export function isDateInFutureOrToday(isoDate: string): boolean {
   return isoDate >= todayISO();
 }
+
+/**
+ * Compute the duration in minutes between two HH:MM[:SS] strings.
+ * Returns null if either time is missing or the values are unparseable.
+ * If end is earlier than start, returns null (we don't assume overnight games).
+ */
+export function diffTimeMinutes(
+  start: string | null | undefined,
+  end: string | null | undefined,
+): number | null {
+  const s = parseTimeMinutes(start);
+  const e = parseTimeMinutes(end);
+  if (s == null || e == null) return null;
+  const diff = e - s;
+  return diff > 0 ? diff : null;
+}
+
+function parseTimeMinutes(time: string | null | undefined): number | null {
+  if (!time) return null;
+  const [hStr, mStr] = time.split(":");
+  const h = Number(hStr);
+  const m = Number(mStr);
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+  return h * 60 + m;
+}
+
+/** Format a minute count as "Хч Yмин" / "X ч" / "Y мин". */
+export function formatMinutesRu(minutes: number | null | undefined): string {
+  if (minutes == null || !Number.isFinite(minutes) || minutes <= 0) return "—";
+  const h = Math.floor(minutes / 60);
+  const m = minutes - h * 60;
+  if (h > 0 && m > 0) return `${h} ч ${m} мин`;
+  if (h > 0) return `${h} ч`;
+  return `${m} мин`;
+}

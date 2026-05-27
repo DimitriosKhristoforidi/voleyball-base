@@ -10,6 +10,12 @@ interface AppModalProps {
   size?: "xs" | "sm" | "md" | "lg" | "cover" | "full";
   isDismissable?: boolean;
   dialogClassName?: string;
+  /**
+   * Scroll behavior when content overflows.
+   * - "inside" (default): body scrolls, header/footer stay fixed.
+   * - "outside": entire dialog scrolls within the page.
+   */
+  scroll?: "inside" | "outside";
 }
 
 /**
@@ -25,15 +31,20 @@ export function AppModal({
   size = "md",
   isDismissable = true,
   dialogClassName,
+  scroll = "inside",
 }: AppModalProps) {
+  // `max-h-full` clamps the dialog to the container so the Modal.Body
+  // (which has `flex-1 min-h-0 overflow-y-auto`) can actually scroll.
+  const dialogClasses = ["max-h-full", dialogClassName].filter(Boolean).join(" ");
+
   return (
     <Modal.Backdrop
       isOpen={isOpen}
       onOpenChange={onOpenChange}
       isDismissable={isDismissable}
     >
-      <Modal.Container size={size}>
-        <Modal.Dialog className={dialogClassName}>
+      <Modal.Container size={size} scroll={scroll}>
+        <Modal.Dialog className={dialogClasses}>
           <Modal.CloseTrigger />
           <Modal.Header>
             <Modal.Heading>{title}</Modal.Heading>

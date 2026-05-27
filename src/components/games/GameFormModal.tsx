@@ -1,8 +1,15 @@
 import { Button } from "@heroui/react";
-import { useEffect, useState, type FormEvent } from "react";
-import type { Game, GameInsert, GameStatus, Venue } from "@/types/domain";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import type {
+  CostSource,
+  Game,
+  GameInsert,
+  GameStatus,
+  Venue,
+} from "@/types/domain";
 import { GAME_STATUS_LABEL_RU, GAME_STATUSES } from "@/types/domain";
-import { todayISO } from "@/lib/date";
+import { diffTimeMinutes, todayISO } from "@/lib/date";
+import { computeAutoTotalCost, formatAmount } from "@/lib/payments";
 import { AppModal } from "@/components/ui/AppModal";
 import { AppInput, AppTextarea } from "@/components/ui/AppField";
 import { AppSelect } from "@/components/ui/AppSelect";
@@ -21,8 +28,11 @@ interface FormState {
   game_date: string;
   start_time: string;
   end_time: string;
-  price_per_player: string;
-  max_players: string;
+  total_cost: string;
+  /** Tracks whether total_cost was auto-derived from the venue or manually set. */
+  cost_source: CostSource;
+  max_players: number | null; // numeric input
+  max_players_str: string;
   status: GameStatus;
   notes: string;
 }
@@ -33,8 +43,10 @@ const emptyState = (): FormState => ({
   game_date: todayISO(),
   start_time: "20:00",
   end_time: "",
-  price_per_player: "",
-  max_players: "",
+  total_cost: "",
+  cost_source: "manual",
+  max_players: null,
+  max_players_str: "",
   status: "planned",
   notes: "",
 });
@@ -47,9 +59,10 @@ function toFormState(game: Game | null): FormState {
     game_date: game.game_date,
     start_time: game.start_time.slice(0, 5),
     end_time: game.end_time ? game.end_time.slice(0, 5) : "",
-    price_per_player:
-      game.price_per_player != null ? String(game.price_per_player) : "",
-    max_players: game.max_players != null ? String(game.max_players) : "",
+    total_cost: game.total_cost != null ? String(game.total_cost) : "",
+    cost_source: game.cost_source,
+    max_players: game.max_players,
+    max_players_str: game.max_players != null ? String(game.max_players) : "",
     status: game.status,
     notes: game.notes ?? "",
   };
@@ -73,6 +86,62 @@ export function GameFormModal({
     }
   }, [isOpen, initialValue]);
 
+  const selectedVenue = useMemo(
+    () => venues.find((v) => v.id === form.venue_id) ?? null,
+    [venues, form.venue_id],
+  );
+
+  const durationMinutes = useMemo(
+    () => diffTimeMinutes(form.start_time, form.end_time),
+    [form.start_time, form.end_time],
+  );
+
+  const autoCost = useMemo(
+    () => computeAutoTotalCost(selectedVenue?.hourly_price, durationMinutes),
+    [selectedVenue?.hourly_price, durationMinutes],
+  );
+
+  /**
+   * When the user hasn't manually overridden the cost yet (cost_source = "venue_auto"),
+   * recalculate it whenever venue/start/end change.
+   */
+  useEffect(() => {
+    if (form.cost_source !== "venue_auto") return;
+    const next = autoCost != null ? String(autoCost) : "";
+    if (next !== form.total_cost) {
+      setForm((s) => ({ ...s, total_cost: next }));
+    }
+  }, [autoCost, form.cost_source, form.total_cost]);
+
+  function handleVenueChange(venueId: string) {
+    setForm((s) => {
+      // If the user hasn't manually set a cost yet and the new venue has hourly_price,
+      // switch the source to "venue_auto" so the auto-cost effect picks it up.
+      const newVenue = venues.find((v) => v.id === venueId) ?? null;
+      const hasManual = s.cost_source === "manual" && s.total_cost.trim() !== "";
+      const next: FormState = { ...s, venue_id: venueId };
+      if (!hasManual && newVenue?.hourly_price != null) {
+        next.cost_source = "venue_auto";
+      }
+      return next;
+    });
+  }
+
+  function handleTotalCostChange(value: string) {
+    // Any manual edit flips cost_source to "manual" and protects the value
+    // from being overwritten on subsequent venue/time changes.
+    setForm((s) => ({ ...s, total_cost: value, cost_source: "manual" }));
+  }
+
+  function handleRecalculate() {
+    if (autoCost == null) return;
+    setForm((s) => ({
+      ...s,
+      total_cost: String(autoCost),
+      cost_source: "venue_auto",
+    }));
+  }
+
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
@@ -83,9 +152,10 @@ export function GameFormModal({
         venue_id: form.venue_id || null,
         game_date: form.game_date,
         start_time: form.start_time,
-        end_time: form.end_time ? form.end_time : null,
-        price_per_player: parseNumber(form.price_per_player),
-        max_players: parseInt(form.max_players, 10) || null,
+        end_time: form.end_time || null,
+        total_cost: parseNumber(form.total_cost),
+        cost_source: form.cost_source,
+        max_players: parseIntOrNull(form.max_players_str),
         status: form.status,
         notes: emptyToNull(form.notes),
       };
@@ -97,6 +167,20 @@ export function GameFormModal({
       setLoading(false);
     }
   }
+
+  const venueHourlyHint =
+    selectedVenue?.hourly_price != null
+      ? `Цена площадки: ${formatAmount(selectedVenue.hourly_price)} ${selectedVenue.currency}/час`
+      : null;
+
+  const autoHint =
+    autoCost != null && form.cost_source === "venue_auto"
+      ? `Стоимость рассчитана автоматически по цене площадки${
+          selectedVenue?.hourly_price != null
+            ? `: ${formatAmount(selectedVenue.hourly_price)} ${selectedVenue.currency}/час`
+            : ""
+        }`
+      : null;
 
   return (
     <AppModal
@@ -137,7 +221,7 @@ export function GameFormModal({
         <AppSelect
           label="Площадка"
           value={form.venue_id || null}
-          onChange={(v) => setForm((s) => ({ ...s, venue_id: v ?? "" }))}
+          onChange={(v) => handleVenueChange(v ?? "")}
           options={venues.map((v) => ({ id: v.id, label: v.name }))}
           placeholder="Выберите площадку"
         />
@@ -163,20 +247,49 @@ export function GameFormModal({
             onChange={(v) => setForm((s) => ({ ...s, end_time: v }))}
           />
         </div>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+
+        <div className="flex flex-col gap-1">
           <AppInput
             type="number"
             inputMode="decimal"
-            label="Цена с человека"
-            value={form.price_per_player}
-            onChange={(v) => setForm((s) => ({ ...s, price_per_player: v }))}
+            label="Общая стоимость игры"
+            placeholder="например, 3000"
+            value={form.total_cost}
+            onChange={handleTotalCostChange}
           />
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
+            <span>
+              Стоимость делится между игроками автоматически по сыгранному времени.
+            </span>
+            {autoCost != null && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onPress={handleRecalculate}
+                isDisabled={
+                  form.cost_source === "venue_auto" &&
+                  parseNumber(form.total_cost) === autoCost
+                }
+              >
+                Пересчитать по цене площадки
+              </Button>
+            )}
+          </div>
+          {autoHint && (
+            <div className="text-xs text-accent">{autoHint}</div>
+          )}
+          {!autoHint && venueHourlyHint && (
+            <div className="text-xs text-muted">{venueHourlyHint}</div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <AppInput
             type="number"
             inputMode="numeric"
             label="Лимит игроков"
-            value={form.max_players}
-            onChange={(v) => setForm((s) => ({ ...s, max_players: v }))}
+            value={form.max_players_str}
+            onChange={(v) => setForm((s) => ({ ...s, max_players_str: v }))}
           />
           <AppSelect<GameStatus>
             label="Статус"
@@ -208,8 +321,15 @@ function emptyToNull(value: string): string | null {
 }
 
 function parseNumber(value: string): number | null {
-  const v = value.trim();
+  const v = value.trim().replace(",", ".");
   if (v.length === 0) return null;
   const n = Number(v);
-  return Number.isFinite(n) ? n : null;
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+function parseIntOrNull(value: string): number | null {
+  const v = value.trim();
+  if (v.length === 0) return null;
+  const n = parseInt(v, 10);
+  return Number.isFinite(n) && n >= 0 ? n : null;
 }

@@ -3,7 +3,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   Button,
   Card,
-  Chip,
   Input,
   Link as HeroLink,
   Table,
@@ -16,7 +15,9 @@ import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import {
   GameStatusChip,
   ParticipantStatusChip,
+  PaymentStatusChip,
 } from "@/components/common/StatusChips";
+import { PositionChips } from "@/components/players/PositionChips";
 import { AppCheckbox } from "@/components/ui/AppCheckbox";
 import { AppSelect } from "@/components/ui/AppSelect";
 import { AddParticipantsModal } from "@/components/games/AddParticipantsModal";
@@ -26,7 +27,15 @@ import {
   gamesService,
 } from "@/services/gamesService";
 import { playersService } from "@/services/playersService";
-import { formatDateRu, formatTimeRange } from "@/lib/date";
+import { formatDateRu, formatMinutesRu, formatTimeRange } from "@/lib/date";
+import {
+  calculateParticipantPayments,
+  defaultBillableForStatus,
+  formatAmount,
+  hoursStringToMinutes,
+  minutesToHoursString,
+  type ParticipantPayment,
+} from "@/lib/payments";
 import {
   PARTICIPANT_STATUS_LABEL_RU,
   PARTICIPANT_STATUSES,
@@ -95,7 +104,18 @@ export function GameDetailPage() {
     return new Set((game?.participants ?? []).map((p) => p.player_id));
   }, [game]);
 
-  const totals = useMemo(() => computeTotals(game), [game]);
+  const breakdown = useMemo(
+    () => (game ? calculateParticipantPayments(game) : null),
+    [game],
+  );
+
+  const paymentsByParticipantId = useMemo(() => {
+    const map = new Map<string, ParticipantPayment>();
+    breakdown?.participants.forEach((row) => map.set(row.participant_id, row));
+    return map;
+  }, [breakdown]);
+
+  const currency = game?.venue?.currency ?? "KGS";
 
   async function patchParticipant(
     pid: string,
@@ -122,7 +142,13 @@ export function GameDetailPage() {
     p: ParticipantWithPlayer,
     status: ParticipantStatus,
   ) {
-    void patchParticipant(p.id, { status }, { status });
+    // Status change also adjusts is_billable based on sensible defaults.
+    const is_billable = defaultBillableForStatus(status);
+    void patchParticipant(
+      p.id,
+      { status, is_billable },
+      { status, is_billable },
+    );
   }
 
   function handleAttendedToggle(p: ParticipantWithPlayer, attended: boolean) {
@@ -131,7 +157,12 @@ export function GameDetailPage() {
       : p.status === "attended"
         ? "confirmed"
         : p.status;
-    void patchParticipant(p.id, { status }, { status });
+    const is_billable = defaultBillableForStatus(status);
+    void patchParticipant(
+      p.id,
+      { status, is_billable },
+      { status, is_billable },
+    );
   }
 
   function handleAbsentToggle(p: ParticipantWithPlayer, absent: boolean) {
@@ -140,13 +171,46 @@ export function GameDetailPage() {
       : p.status === "absent"
         ? "confirmed"
         : p.status;
-    void patchParticipant(p.id, { status }, { status });
+    const is_billable = defaultBillableForStatus(status);
+    void patchParticipant(
+      p.id,
+      { status, is_billable },
+      { status, is_billable },
+    );
+  }
+
+  function handleBillableToggle(p: ParticipantWithPlayer, value: boolean) {
+    void patchParticipant(
+      p.id,
+      { is_billable: value },
+      { is_billable: value },
+    );
+  }
+
+  function handlePlayedHoursBlur(p: ParticipantWithPlayer, rawValue: string) {
+    const minutes = hoursStringToMinutes(rawValue);
+    if (minutes === p.played_minutes) return;
+    void patchParticipant(p.id, { played_minutes: minutes });
+  }
+
+  function handlePlayedResetToFull(p: ParticipantWithPlayer) {
+    if (!breakdown?.game_duration_minutes) return;
+    const minutes = breakdown.game_duration_minutes;
+    void patchParticipant(
+      p.id,
+      { played_minutes: minutes },
+      { played_minutes: minutes },
+    );
   }
 
   function handlePaidToggle(p: ParticipantWithPlayer, paid: boolean) {
     const payload: GameParticipantUpdate = { has_paid: paid };
-    if (paid && p.paid_amount == null && game?.price_per_player != null) {
-      payload.paid_amount = game.price_per_player;
+    // When marking as paid and amount is empty, default to the calculated owed amount.
+    if (paid && p.paid_amount == null) {
+      const calc = paymentsByParticipantId.get(p.id);
+      if (calc && calc.owed_amount > 0) {
+        payload.paid_amount = calc.owed_amount;
+      }
     }
     if (!paid) {
       payload.paid_amount = null;
@@ -160,7 +224,7 @@ export function GameDetailPage() {
   }
 
   function handlePaidAmountBlur(p: ParticipantWithPlayer, rawValue: string) {
-    const trimmed = rawValue.trim();
+    const trimmed = rawValue.trim().replace(",", ".");
     const value = trimmed === "" ? null : Number(trimmed);
     if (value != null && !Number.isFinite(value)) return;
     void patchParticipant(p.id, { paid_amount: value });
@@ -177,11 +241,6 @@ export function GameDetailPage() {
     );
   }
 
-  function handleNoteBlur(p: ParticipantWithPlayer, note: string) {
-    const value = note.trim() === "" ? null : note.trim();
-    void patchParticipant(p.id, { payment_note: value });
-  }
-
   async function handleAddPlayers(playerIds: string[]) {
     if (!id) return;
     await gameParticipantsService.addMany(id, playerIds, "invited");
@@ -194,7 +253,7 @@ export function GameDetailPage() {
   }
 
   if (loading) return <LoadingState />;
-  if (!game) {
+  if (!game || !breakdown) {
     return (
       <EmptyState
         title="Игра не найдена"
@@ -235,6 +294,7 @@ export function GameDetailPage() {
         </div>
       )}
 
+      {/* Info row */}
       <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
         <InfoCard label="Статус">
           <GameStatusChip status={game.status} />
@@ -257,38 +317,66 @@ export function GameDetailPage() {
             </HeroLink>
           )}
         </InfoCard>
-        <InfoCard label="Цена с человека">
+        <InfoCard label="Длительность">
           <div className="text-sm">
-            {game.price_per_player != null
-              ? `${formatAmount(game.price_per_player)} сом`
-              : "—"}
+            {formatMinutesRu(breakdown.game_duration_minutes)}
           </div>
           {game.max_players && (
             <div className="text-xs text-muted">Лимит: {game.max_players}</div>
           )}
         </InfoCard>
-        <InfoCard label="Итоги">
-          <div className="flex flex-wrap gap-2 text-xs">
-            <Chip size="sm" variant="soft" color="accent">
-              Подтв.: {totals.confirmed}
-            </Chip>
-            <Chip size="sm" variant="soft" color="success">
-              Пришли: {totals.attended}
-            </Chip>
-            <Chip size="sm" variant="soft" color="success">
-              Оплат.: {totals.paid}
-            </Chip>
-            <Chip size="sm" variant="soft" color="warning">
-              Не опл.: {totals.unpaid}
-            </Chip>
+        <InfoCard label="Общая стоимость">
+          <div className="text-sm">
+            {game.total_cost != null
+              ? `${formatAmount(game.total_cost)} ${currency}`
+              : "—"}
           </div>
-          <div className="mt-1 text-xs text-muted">
-            Собрано: {formatAmount(totals.collected)} сом
-            {totals.expected != null && (
-              <> из {formatAmount(totals.expected)} сом</>
-            )}
-          </div>
+          {game.cost_source === "venue_auto" && game.total_cost != null && (
+            <div className="text-xs text-accent">
+              Авто из цены площадки
+            </div>
+          )}
         </InfoCard>
+      </div>
+
+      {/* Money summary */}
+      <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+        <SummaryStat
+          label="Общая стоимость"
+          value={
+            game.total_cost != null
+              ? `${formatAmount(game.total_cost)} ${currency}`
+              : "—"
+          }
+        />
+        <SummaryStat
+          label="Общее игровое время"
+          value={formatMinutesRu(breakdown.total_billable_minutes)}
+        />
+        <SummaryStat
+          label="Оплачено"
+          value={`${formatAmount(breakdown.collected)} ${currency}`}
+          tone="success"
+        />
+        <SummaryStat
+          label="Осталось собрать"
+          value={
+            breakdown.remaining != null
+              ? `${formatAmount(breakdown.remaining)} ${currency}`
+              : "—"
+          }
+          tone={
+            breakdown.remaining != null && breakdown.remaining > 0
+              ? "warning"
+              : "default"
+          }
+        />
+        <SummaryStat label="Оплатили" value={breakdown.paid_count} />
+        <SummaryStat
+          label="Не оплатили"
+          value={breakdown.unpaid_count}
+          tone={breakdown.unpaid_count > 0 ? "warning" : "default"}
+        />
       </div>
 
       {game.status === "cancelled" && (
@@ -313,119 +401,174 @@ export function GameDetailPage() {
           <Table.ScrollContainer>
             <Table.Content
               aria-label="Участники"
-              className="min-w-[1200px]"
+              className="min-w-[1400px]"
             >
               <Table.Header>
                 <Table.Column isRowHeader>Игрок</Table.Column>
-                <Table.Column>Telegram</Table.Column>
+                <Table.Column>Позиции</Table.Column>
                 <Table.Column>Статус</Table.Column>
+                <Table.Column>Сыграл (ч)</Table.Column>
+                <Table.Column>Учитывать</Table.Column>
+                <Table.Column>Должен</Table.Column>
                 <Table.Column>Пришёл</Table.Column>
                 <Table.Column>Не пришёл</Table.Column>
                 <Table.Column>Оплатил</Table.Column>
                 <Table.Column>Сумма</Table.Column>
                 <Table.Column>Способ</Table.Column>
-                <Table.Column>Заметка</Table.Column>
+                <Table.Column>Остаток</Table.Column>
+                <Table.Column>Оплата</Table.Column>
                 <Table.Column>Действия</Table.Column>
               </Table.Header>
               <Table.Body>
-                {game.participants.map((p) => (
-                  <Table.Row key={p.id}>
-                    <Table.Cell>
-                      <div className="font-medium">{p.player.full_name}</div>
-                    </Table.Cell>
-                    <Table.Cell>
-                      <TelegramCell player={p.player} />
-                    </Table.Cell>
-                    <Table.Cell>
-                      <div className="min-w-[150px]">
-                        <AppSelect<ParticipantStatus>
-                          ariaLabel="Статус"
-                          value={p.status}
-                          onChange={(v) =>
-                            v && handleStatusChange(p, v)
-                          }
-                          options={STATUS_OPTIONS}
-                          variant="secondary"
-                          renderValue={(v) =>
-                            v ? <ParticipantStatusChip status={v} /> : null
-                          }
+                {game.participants.map((p) => {
+                  const calc = paymentsByParticipantId.get(p.id);
+                  return (
+                    <Table.Row key={p.id}>
+                      <Table.Cell>
+                        <div className="font-medium">{p.player.full_name}</div>
+                        <div className="text-xs text-muted">
+                          <TelegramInline player={p.player} />
+                        </div>
+                      </Table.Cell>
+                      <Table.Cell>
+                        <PositionChips positions={p.player.positions} />
+                      </Table.Cell>
+                      <Table.Cell>
+                        <div className="min-w-[150px]">
+                          <AppSelect<ParticipantStatus>
+                            ariaLabel="Статус"
+                            value={p.status}
+                            onChange={(v) =>
+                              v && handleStatusChange(p, v)
+                            }
+                            options={STATUS_OPTIONS}
+                            variant="secondary"
+                            renderValue={(v) =>
+                              v ? <ParticipantStatusChip status={v} /> : null
+                            }
+                          />
+                        </div>
+                      </Table.Cell>
+                      <Table.Cell>
+                        <div className="flex items-center gap-1">
+                          <Input
+                            type="number"
+                            inputMode="decimal"
+                            aria-label="Сыграл часов"
+                            className="w-20"
+                            variant="secondary"
+                            step="0.25"
+                            min="0"
+                            defaultValue={minutesToHoursString(
+                              p.played_minutes,
+                            )}
+                            onBlur={(e) =>
+                              handlePlayedHoursBlur(p, e.currentTarget.value)
+                            }
+                          />
+                          {breakdown.game_duration_minutes != null && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onPress={() => handlePlayedResetToFull(p)}
+                              aria-label="Полное время игры"
+                            >
+                              ↻
+                            </Button>
+                          )}
+                        </div>
+                        {calc && calc.played_minutes_raw == null && (
+                          <div className="mt-1 text-[10px] text-muted">
+                            по умолчанию {formatMinutesRu(calc.played_minutes)}
+                          </div>
+                        )}
+                      </Table.Cell>
+                      <Table.Cell>
+                        <AppCheckbox
+                          isSelected={p.is_billable}
+                          onChange={(v) => handleBillableToggle(p, v)}
+                          ariaLabel="Учитывать в оплате"
                         />
-                      </div>
-                    </Table.Cell>
-                    <Table.Cell>
-                      <AppCheckbox
-                        isSelected={p.status === "attended"}
-                        onChange={(v) => handleAttendedToggle(p, v)}
-                        ariaLabel="Пришёл"
-                      />
-                    </Table.Cell>
-                    <Table.Cell>
-                      <AppCheckbox
-                        isSelected={p.status === "absent"}
-                        onChange={(v) => handleAbsentToggle(p, v)}
-                        ariaLabel="Не пришёл"
-                      />
-                    </Table.Cell>
-                    <Table.Cell>
-                      <AppCheckbox
-                        isSelected={p.has_paid}
-                        onChange={(v) => handlePaidToggle(p, v)}
-                        ariaLabel="Оплатил"
-                      />
-                    </Table.Cell>
-                    <Table.Cell>
-                      <Input
-                        type="number"
-                        inputMode="decimal"
-                        aria-label="Сумма"
-                        className="w-24"
-                        variant="secondary"
-                        defaultValue={
-                          p.paid_amount != null ? String(p.paid_amount) : ""
-                        }
-                        onBlur={(e) =>
-                          handlePaidAmountBlur(p, e.currentTarget.value)
-                        }
-                        disabled={!p.has_paid}
-                      />
-                    </Table.Cell>
-                    <Table.Cell>
-                      <div className="min-w-[140px]">
-                        <AppSelect<PaymentMethod>
-                          ariaLabel="Способ оплаты"
-                          value={p.payment_method}
-                          onChange={(v) => handlePaymentMethodChange(p, v)}
-                          options={PAYMENT_OPTIONS}
-                          isDisabled={!p.has_paid}
-                          variant="secondary"
-                          placeholder="—"
+                      </Table.Cell>
+                      <Table.Cell>
+                        {calc?.is_billable && calc.owed_amount > 0
+                          ? `${formatAmount(calc.owed_amount)} ${currency}`
+                          : "—"}
+                      </Table.Cell>
+                      <Table.Cell>
+                        <AppCheckbox
+                          isSelected={p.status === "attended"}
+                          onChange={(v) => handleAttendedToggle(p, v)}
+                          ariaLabel="Пришёл"
                         />
-                      </div>
-                    </Table.Cell>
-                    <Table.Cell>
-                      <Input
-                        aria-label="Заметка по оплате"
-                        className="min-w-[140px]"
-                        variant="secondary"
-                        defaultValue={p.payment_note ?? ""}
-                        onBlur={(e) =>
-                          handleNoteBlur(p, e.currentTarget.value)
-                        }
-                      />
-                    </Table.Cell>
-                    <Table.Cell>
-                      <div className="flex justify-end">
-                        <Button
-                          size="sm"
-                          variant="danger-soft"
-                          onPress={() => setRemoveTarget(p)}
-                        >
-                          Удалить
-                        </Button>
-                      </div>
-                    </Table.Cell>
-                  </Table.Row>
-                ))}
+                      </Table.Cell>
+                      <Table.Cell>
+                        <AppCheckbox
+                          isSelected={p.status === "absent"}
+                          onChange={(v) => handleAbsentToggle(p, v)}
+                          ariaLabel="Не пришёл"
+                        />
+                      </Table.Cell>
+                      <Table.Cell>
+                        <AppCheckbox
+                          isSelected={p.has_paid}
+                          onChange={(v) => handlePaidToggle(p, v)}
+                          ariaLabel="Оплатил"
+                        />
+                      </Table.Cell>
+                      <Table.Cell>
+                        <Input
+                          type="number"
+                          inputMode="decimal"
+                          aria-label="Сумма"
+                          className="w-24"
+                          variant="secondary"
+                          defaultValue={
+                            p.paid_amount != null ? String(p.paid_amount) : ""
+                          }
+                          onBlur={(e) =>
+                            handlePaidAmountBlur(p, e.currentTarget.value)
+                          }
+                          disabled={!p.has_paid}
+                        />
+                      </Table.Cell>
+                      <Table.Cell>
+                        <div className="min-w-[140px]">
+                          <AppSelect<PaymentMethod>
+                            ariaLabel="Способ оплаты"
+                            value={p.payment_method}
+                            onChange={(v) => handlePaymentMethodChange(p, v)}
+                            options={PAYMENT_OPTIONS}
+                            isDisabled={!p.has_paid}
+                            variant="secondary"
+                            placeholder="—"
+                          />
+                        </div>
+                      </Table.Cell>
+                      <Table.Cell>
+                        {calc?.is_billable
+                          ? `${formatAmount(calc.remaining_amount)} ${currency}`
+                          : "—"}
+                      </Table.Cell>
+                      <Table.Cell>
+                        {calc && (
+                          <PaymentStatusChip status={calc.payment_status} />
+                        )}
+                      </Table.Cell>
+                      <Table.Cell>
+                        <div className="flex justify-end">
+                          <Button
+                            size="sm"
+                            variant="danger-soft"
+                            onPress={() => setRemoveTarget(p)}
+                          >
+                            Удалить
+                          </Button>
+                        </div>
+                      </Table.Cell>
+                    </Table.Row>
+                  );
+                })}
               </Table.Body>
             </Table.Content>
           </Table.ScrollContainer>
@@ -480,52 +623,38 @@ function InfoCard({
   );
 }
 
-interface Totals {
-  confirmed: number;
-  attended: number;
-  paid: number;
-  unpaid: number;
-  collected: number;
-  expected: number | null;
+interface SummaryStatProps {
+  label: string;
+  value: number | string;
+  tone?: "default" | "warning" | "success";
 }
 
-function computeTotals(game: GameDetail | null): Totals {
-  const t: Totals = {
-    confirmed: 0,
-    attended: 0,
-    paid: 0,
-    unpaid: 0,
-    collected: 0,
-    expected: null,
-  };
-  if (!game) return t;
-  for (const p of game.participants) {
-    if (p.status === "confirmed") t.confirmed++;
-    if (p.status === "attended") {
-      t.attended++;
-      t.confirmed++;
-    }
-    if (p.has_paid) {
-      t.paid++;
-      t.collected += Number(p.paid_amount ?? 0);
-    } else if (p.status === "confirmed" || p.status === "attended") {
-      t.unpaid++;
-    }
-  }
-  if (game.price_per_player != null) {
-    t.expected = game.price_per_player * t.confirmed;
-  }
-  return t;
+function SummaryStat({ label, value, tone = "default" }: SummaryStatProps) {
+  const toneClass =
+    tone === "warning"
+      ? "text-warning"
+      : tone === "success"
+        ? "text-success"
+        : "text-foreground";
+  return (
+    <Card>
+      <Card.Content className="gap-1">
+        <div className="text-xs uppercase tracking-wide text-muted">
+          {label}
+        </div>
+        <div className={`text-base font-semibold ${toneClass}`}>{value}</div>
+      </Card.Content>
+    </Card>
+  );
 }
 
-function TelegramCell({ player }: { player: Player }) {
+function TelegramInline({ player }: { player: Player }) {
   const url = telegramHref(player);
-  const label = player.telegram_username || "—";
-  if (!url) return <span>{label}</span>;
+  const label = player.telegram_username || "";
+  if (!url || !label) return <span>—</span>;
   return (
     <HeroLink href={url} target="_blank" rel="noreferrer noopener">
-      {label || "Открыть"}
-      <HeroLink.Icon />
+      {label}
     </HeroLink>
   );
 }
@@ -538,9 +667,4 @@ function telegramHref(player: Player): string | null {
     return `https://t.me/${h}`;
   }
   return null;
-}
-
-function formatAmount(amount: number): string {
-  const fixed = amount.toFixed(2);
-  return fixed.replace(/\.?0+$/, "");
 }

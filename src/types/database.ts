@@ -19,9 +19,11 @@ export type Database = {
           game_id: string;
           has_paid: boolean;
           id: string;
+          is_billable: boolean;
           paid_amount: number | null;
           payment_method: Database["public"]["Enums"]["payment_method"] | null;
           payment_note: string | null;
+          played_minutes: number | null;
           player_id: string;
           status: Database["public"]["Enums"]["participant_status"];
           updated_at: string;
@@ -32,9 +34,11 @@ export type Database = {
           game_id: string;
           has_paid?: boolean;
           id?: string;
+          is_billable?: boolean;
           paid_amount?: number | null;
           payment_method?: Database["public"]["Enums"]["payment_method"] | null;
           payment_note?: string | null;
+          played_minutes?: number | null;
           player_id: string;
           status?: Database["public"]["Enums"]["participant_status"];
           updated_at?: string;
@@ -45,9 +49,11 @@ export type Database = {
           game_id?: string;
           has_paid?: boolean;
           id?: string;
+          is_billable?: boolean;
           paid_amount?: number | null;
           payment_method?: Database["public"]["Enums"]["payment_method"] | null;
           payment_note?: string | null;
+          played_minutes?: number | null;
           player_id?: string;
           status?: Database["public"]["Enums"]["participant_status"];
           updated_at?: string;
@@ -71,6 +77,7 @@ export type Database = {
       };
       games: {
         Row: {
+          cost_source: Database["public"]["Enums"]["cost_source"];
           created_at: string;
           end_time: string | null;
           game_date: string;
@@ -81,10 +88,12 @@ export type Database = {
           start_time: string;
           status: Database["public"]["Enums"]["game_status"];
           title: string | null;
+          total_cost: number | null;
           updated_at: string;
           venue_id: string | null;
         };
         Insert: {
+          cost_source?: Database["public"]["Enums"]["cost_source"];
           created_at?: string;
           end_time?: string | null;
           game_date: string;
@@ -95,10 +104,12 @@ export type Database = {
           start_time: string;
           status?: Database["public"]["Enums"]["game_status"];
           title?: string | null;
+          total_cost?: number | null;
           updated_at?: string;
           venue_id?: string | null;
         };
         Update: {
+          cost_source?: Database["public"]["Enums"]["cost_source"];
           created_at?: string;
           end_time?: string | null;
           game_date?: string;
@@ -109,6 +120,7 @@ export type Database = {
           start_time?: string;
           status?: Database["public"]["Enums"]["game_status"];
           title?: string | null;
+          total_cost?: number | null;
           updated_at?: string;
           venue_id?: string | null;
         };
@@ -130,6 +142,7 @@ export type Database = {
           is_active: boolean;
           notes: string | null;
           phone: string | null;
+          positions: string[] | null;
           telegram_url: string | null;
           telegram_username: string | null;
           updated_at: string;
@@ -141,6 +154,7 @@ export type Database = {
           is_active?: boolean;
           notes?: string | null;
           phone?: string | null;
+          positions?: string[] | null;
           telegram_url?: string | null;
           telegram_username?: string | null;
           updated_at?: string;
@@ -152,6 +166,7 @@ export type Database = {
           is_active?: boolean;
           notes?: string | null;
           phone?: string | null;
+          positions?: string[] | null;
           telegram_url?: string | null;
           telegram_username?: string | null;
           updated_at?: string;
@@ -162,6 +177,8 @@ export type Database = {
         Row: {
           address: string | null;
           created_at: string;
+          currency: string;
+          hourly_price: number | null;
           id: string;
           map_url: string | null;
           name: string;
@@ -171,6 +188,8 @@ export type Database = {
         Insert: {
           address?: string | null;
           created_at?: string;
+          currency?: string;
+          hourly_price?: number | null;
           id?: string;
           map_url?: string | null;
           name: string;
@@ -180,6 +199,8 @@ export type Database = {
         Update: {
           address?: string | null;
           created_at?: string;
+          currency?: string;
+          hourly_price?: number | null;
           id?: string;
           map_url?: string | null;
           name?: string;
@@ -191,7 +212,10 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
+    // NOTE: `cost_source` is a CHECK-constrained text column in Postgres,
+    // not a real Postgres enum. We model it as a TS literal type here for safety.
     Enums: {
+      cost_source: "manual" | "venue_auto";
       game_status: "planned" | "completed" | "cancelled";
       participant_status:
         | "invited"

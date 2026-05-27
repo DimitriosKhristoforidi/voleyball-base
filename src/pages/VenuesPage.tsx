@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { VenueFormModal } from "@/components/venues/VenueFormModal";
 import { venuesService } from "@/services/venuesService";
+import { formatAmount } from "@/lib/payments";
 import type { Venue, VenueInsert } from "@/types/domain";
 
 export function VenuesPage() {
@@ -110,10 +111,11 @@ export function VenuesPage() {
       ) : (
         <Table>
           <Table.ScrollContainer>
-            <Table.Content aria-label="Площадки" className="min-w-[600px]">
+            <Table.Content aria-label="Площадки" className="min-w-[720px]">
               <Table.Header>
                 <Table.Column isRowHeader>Название</Table.Column>
                 <Table.Column>Адрес</Table.Column>
+                <Table.Column>Цена за час</Table.Column>
                 <Table.Column>Карта</Table.Column>
                 <Table.Column>Действия</Table.Column>
               </Table.Header>
@@ -127,6 +129,11 @@ export function VenuesPage() {
                       )}
                     </Table.Cell>
                     <Table.Cell>{v.address ?? "—"}</Table.Cell>
+                    <Table.Cell>
+                      {v.hourly_price != null
+                        ? `${formatAmount(v.hourly_price)} ${v.currency}`
+                        : "—"}
+                    </Table.Cell>
                     <Table.Cell>
                       {v.map_url ? (
                         <HeroLink

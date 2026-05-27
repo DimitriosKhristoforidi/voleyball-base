@@ -16,9 +16,18 @@ interface FormState {
   address: string;
   map_url: string;
   notes: string;
+  hourly_price: string;
+  currency: string;
 }
 
-const EMPTY: FormState = { name: "", address: "", map_url: "", notes: "" };
+const EMPTY: FormState = {
+  name: "",
+  address: "",
+  map_url: "",
+  notes: "",
+  hourly_price: "",
+  currency: "KGS",
+};
 
 function toFormState(v: Venue | null): FormState {
   if (!v) return EMPTY;
@@ -27,6 +36,8 @@ function toFormState(v: Venue | null): FormState {
     address: v.address ?? "",
     map_url: v.map_url ?? "",
     notes: v.notes ?? "",
+    hourly_price: v.hourly_price != null ? String(v.hourly_price) : "",
+    currency: v.currency || "KGS",
   };
 }
 
@@ -57,6 +68,8 @@ export function VenueFormModal({
         address: emptyToNull(form.address),
         map_url: emptyToNull(form.map_url),
         notes: emptyToNull(form.notes),
+        hourly_price: parseNumber(form.hourly_price),
+        currency: form.currency.trim() || "KGS",
       };
       await onSubmit(payload);
       onClose();
@@ -117,6 +130,26 @@ export function VenueFormModal({
           value={form.map_url}
           onChange={(v) => setForm((s) => ({ ...s, map_url: v }))}
         />
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <div className="md:col-span-2">
+            <AppInput
+              type="number"
+              inputMode="decimal"
+              label="Цена за час"
+              placeholder="например, 1000"
+              value={form.hourly_price}
+              onChange={(v) => setForm((s) => ({ ...s, hourly_price: v }))}
+            />
+          </div>
+          <AppInput
+            label="Валюта"
+            placeholder="KGS"
+            value={form.currency}
+            onChange={(v) =>
+              setForm((s) => ({ ...s, currency: v.toUpperCase() }))
+            }
+          />
+        </div>
         <AppTextarea
           label="Заметки"
           value={form.notes}
@@ -132,4 +165,11 @@ export function VenueFormModal({
 function emptyToNull(value: string): string | null {
   const v = value.trim();
   return v.length === 0 ? null : v;
+}
+
+function parseNumber(value: string): number | null {
+  const v = value.trim().replace(",", ".");
+  if (v.length === 0) return null;
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0 ? n : null;
 }

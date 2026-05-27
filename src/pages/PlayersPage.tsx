@@ -6,6 +6,7 @@ import { LoadingState } from "@/components/common/LoadingState";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { PlayerFormModal } from "@/components/players/PlayerFormModal";
+import { PositionChips } from "@/components/players/PositionChips";
 import { playersService } from "@/services/playersService";
 import type { Player, PlayerInsert } from "@/types/domain";
 
@@ -120,11 +121,12 @@ export function PlayersPage() {
       ) : (
         <Table>
           <Table.ScrollContainer>
-            <Table.Content aria-label="Игроки" className="min-w-[700px]">
+            <Table.Content aria-label="Игроки" className="min-w-[820px]">
               <Table.Header>
                 <Table.Column isRowHeader>Имя</Table.Column>
                 <Table.Column>Telegram</Table.Column>
                 <Table.Column>Телефон</Table.Column>
+                <Table.Column>Позиции</Table.Column>
                 <Table.Column>Статус</Table.Column>
                 <Table.Column>Действия</Table.Column>
               </Table.Header>
@@ -141,6 +143,9 @@ export function PlayersPage() {
                       <TelegramCell player={player} />
                     </Table.Cell>
                     <Table.Cell>{player.phone ?? "—"}</Table.Cell>
+                    <Table.Cell>
+                      <PositionChips positions={player.positions} />
+                    </Table.Cell>
                     <Table.Cell>
                       {player.is_active ? (
                         <Chip color="success" variant="soft" size="sm">

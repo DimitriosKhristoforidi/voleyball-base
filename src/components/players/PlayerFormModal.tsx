@@ -1,9 +1,15 @@
 import { Button } from "@heroui/react";
 import { useEffect, useState, type FormEvent } from "react";
-import type { Player, PlayerInsert } from "@/types/domain";
+import {
+  isPlayerPosition,
+  type Player,
+  type PlayerInsert,
+  type PlayerPosition,
+} from "@/types/domain";
 import { AppModal } from "@/components/ui/AppModal";
 import { AppInput, AppTextarea } from "@/components/ui/AppField";
 import { AppSwitch } from "@/components/ui/AppSwitch";
+import { PositionsField } from "@/components/ui/PositionsField";
 
 interface PlayerFormModalProps {
   isOpen: boolean;
@@ -19,6 +25,7 @@ interface FormState {
   phone: string;
   notes: string;
   is_active: boolean;
+  positions: PlayerPosition[];
 }
 
 const EMPTY: FormState = {
@@ -28,6 +35,7 @@ const EMPTY: FormState = {
   phone: "",
   notes: "",
   is_active: true,
+  positions: [],
 };
 
 function toFormState(player: Player | null): FormState {
@@ -39,6 +47,7 @@ function toFormState(player: Player | null): FormState {
     phone: player.phone ?? "",
     notes: player.notes ?? "",
     is_active: player.is_active,
+    positions: (player.positions ?? []).filter(isPlayerPosition),
   };
 }
 
@@ -71,6 +80,7 @@ export function PlayerFormModal({
         phone: emptyToNull(form.phone),
         notes: emptyToNull(form.notes),
         is_active: form.is_active,
+        positions: form.positions.length > 0 ? form.positions : null,
       };
       await onSubmit(payload);
       onClose();
@@ -136,6 +146,10 @@ export function PlayerFormModal({
           label="Телефон"
           value={form.phone}
           onChange={(v) => setForm((s) => ({ ...s, phone: v }))}
+        />
+        <PositionsField
+          value={form.positions}
+          onChange={(v) => setForm((s) => ({ ...s, positions: v }))}
         />
         <AppTextarea
           label="Заметки"

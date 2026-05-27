@@ -26,14 +26,16 @@ export function TelegramMessageModal({
   const [included, setIncluded] = useState<Set<ParticipantStatus>>(
     new Set(DEFAULT_INCLUDED),
   );
+  const [includePerPlayer, setIncludePerPlayer] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const message = useMemo(() => {
     if (!game) return "";
     return buildTelegramMessage(game, {
       includeStatuses: Array.from(included),
+      includePerPlayerAmounts: includePerPlayer,
     });
-  }, [game, included]);
+  }, [game, included, includePerPlayer]);
 
   function toggle(status: ParticipantStatus) {
     setIncluded((prev) => {
@@ -89,6 +91,11 @@ export function TelegramMessageModal({
             />
           ))}
         </div>
+        <AppCheckbox
+          isSelected={includePerPlayer}
+          onChange={setIncludePerPlayer}
+          label="Добавить суммы по игрокам"
+        />
         <TextArea
           value={message}
           readOnly

@@ -12,6 +12,7 @@ import { GameFormModal } from "@/components/games/GameFormModal";
 import { gamesService } from "@/services/gamesService";
 import { venuesService } from "@/services/venuesService";
 import { formatDateShortRu, formatTimeRange } from "@/lib/date";
+import { formatAmount } from "@/lib/payments";
 import {
   GAME_STATUS_LABEL_RU,
   GAME_STATUSES,
@@ -155,7 +156,7 @@ export function GamesPage() {
                 <Table.Column>Время</Table.Column>
                 <Table.Column>Название</Table.Column>
                 <Table.Column>Площадка</Table.Column>
-                <Table.Column>Цена</Table.Column>
+                <Table.Column>Стоимость</Table.Column>
                 <Table.Column>Статус</Table.Column>
                 <Table.Column>Действия</Table.Column>
               </Table.Header>
@@ -174,8 +175,8 @@ export function GamesPage() {
                     <Table.Cell>{g.title ?? "—"}</Table.Cell>
                     <Table.Cell>{g.venue?.name ?? "—"}</Table.Cell>
                     <Table.Cell>
-                      {g.price_per_player != null
-                        ? `${formatPrice(g.price_per_player)} сом`
+                      {g.total_cost != null
+                        ? `${formatAmount(g.total_cost)} ${g.venue?.currency ?? "KGS"}`
                         : "—"}
                     </Table.Cell>
                     <Table.Cell>
@@ -235,9 +236,4 @@ export function GamesPage() {
       />
     </div>
   );
-}
-
-function formatPrice(price: number): string {
-  const fixed = price.toFixed(2);
-  return fixed.replace(/\.?0+$/, "");
 }
