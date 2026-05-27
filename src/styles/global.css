@@ -1,0 +1,9 @@
+/* Tailwind v4 + HeroUI v3 — import order matters. */
+@import "tailwindcss";
+@import "@heroui/styles";
+
+html,
+body,
+#root {
+  height: 100%;
+}
