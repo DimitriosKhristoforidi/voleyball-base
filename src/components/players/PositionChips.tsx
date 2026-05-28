@@ -20,7 +20,7 @@ export function PositionChips({
     return <span className="text-xs text-muted">-</span>;
   }
   return (
-    <div className={`flex flex-wrap gap-1 ${className ?? ""}`.trim()}>
+    <div className={`flex flex-wrap gap-1 max-w-xs ${className ?? ""}`.trim()}>
       {positions.map((p) => {
         const label = isPlayerPosition(p)
           ? PLAYER_POSITION_LABEL_RU[p]
