@@ -392,8 +392,6 @@ export default function GameDetailPage() {
                 <Table.Column>Сыграл (ч)</Table.Column>
                 <Table.Column>Учитывать</Table.Column>
                 <Table.Column>Должен</Table.Column>
-                <Table.Column>Пришёл</Table.Column>
-                <Table.Column>Не пришёл</Table.Column>
                 <Table.Column>Оплатил</Table.Column>
                 <Table.Column>Сумма</Table.Column>
                 <Table.Column>Способ</Table.Column>
@@ -413,7 +411,10 @@ export default function GameDetailPage() {
                         </div>
                       </Table.Cell>
                       <Table.Cell>
-                        <PositionChips positions={p.player.positions} />
+                        <PositionChips
+                          collapsed
+                          positions={p.player.positions}
+                        />
                       </Table.Cell>
                       <Table.Cell>
                         <div className="min-w-[150px]">
@@ -474,20 +475,6 @@ export default function GameDetailPage() {
                         {calc?.is_billable && calc.owed_amount > 0
                           ? `${formatAmount(calc.owed_amount)} ${currency}`
                           : "-"}
-                      </Table.Cell>
-                      <Table.Cell>
-                        <AppCheckbox
-                          isSelected={p.status === "attended"}
-                          onChange={(v) => handleAttendedToggle(p, v)}
-                          ariaLabel="Пришёл"
-                        />
-                      </Table.Cell>
-                      <Table.Cell>
-                        <AppCheckbox
-                          isSelected={p.status === "absent"}
-                          onChange={(v) => handleAbsentToggle(p, v)}
-                          ariaLabel="Не пришёл"
-                        />
                       </Table.Cell>
                       <Table.Cell>
                         <AppCheckbox

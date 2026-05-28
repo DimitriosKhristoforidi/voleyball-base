@@ -55,7 +55,6 @@ export const PARTICIPANT_STATUSES: readonly ParticipantStatus[] = [
 
 export const PAYMENT_METHODS: readonly PaymentMethod[] = [
   "cash",
-  "mbank",
   "bank_transfer",
   "other",
 ] as const;
@@ -76,7 +75,6 @@ export const PARTICIPANT_STATUS_LABEL_RU: Record<ParticipantStatus, string> = {
 
 export const PAYMENT_METHOD_LABEL_RU: Record<PaymentMethod, string> = {
   cash: "Наличные",
-  mbank: "MBank",
   bank_transfer: "Перевод",
   other: "Другое",
 };

@@ -223,7 +223,7 @@ export type Database = {
         | "attended"
         | "absent"
         | "cancelled";
-      payment_method: "cash" | "mbank" | "bank_transfer" | "other";
+      payment_method: "cash" | "bank_transfer" | "other";
     };
     CompositeTypes: Record<string, never>;
   };
