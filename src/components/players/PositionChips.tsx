@@ -1,6 +1,6 @@
 import { Chip, cn } from "@heroui/react";
 import { PLAYER_POSITION_LABEL_RU, isPlayerPosition } from "@/types/domain";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 interface PositionChipsProps {
   positions: string[] | null | undefined;

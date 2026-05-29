@@ -90,7 +90,6 @@ export const PLAYER_POSITIONS = [
   "opposite",
   "middle_blocker",
   "libero",
-  "defensive_specialist",
   "universal",
 ] as const;
 
@@ -102,7 +101,6 @@ export const PLAYER_POSITION_LABEL_RU: Record<PlayerPosition, string> = {
   opposite: "Диагональный",
   middle_blocker: "Центральный",
   libero: "Либеро",
-  defensive_specialist: "Защитник",
   universal: "Универсал",
 };
 

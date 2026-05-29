@@ -142,33 +142,33 @@ export default function GameDetailPage() {
     );
   }
 
-  function handleAttendedToggle(p: ParticipantWithPlayer, attended: boolean) {
-    const status: ParticipantStatus = attended
-      ? "attended"
-      : p.status === "attended"
-        ? "confirmed"
-        : p.status;
-    const is_billable = defaultBillableForStatus(status);
-    void patchParticipant(
-      p.id,
-      { status, is_billable },
-      { status, is_billable },
-    );
-  }
+  // function handleAttendedToggle(p: ParticipantWithPlayer, attended: boolean) {
+  //   const status: ParticipantStatus = attended
+  //     ? "attended"
+  //     : p.status === "attended"
+  //       ? "confirmed"
+  //       : p.status;
+  //   const is_billable = defaultBillableForStatus(status);
+  //   void patchParticipant(
+  //     p.id,
+  //     { status, is_billable },
+  //     { status, is_billable },
+  //   );
+  // }
 
-  function handleAbsentToggle(p: ParticipantWithPlayer, absent: boolean) {
-    const status: ParticipantStatus = absent
-      ? "absent"
-      : p.status === "absent"
-        ? "confirmed"
-        : p.status;
-    const is_billable = defaultBillableForStatus(status);
-    void patchParticipant(
-      p.id,
-      { status, is_billable },
-      { status, is_billable },
-    );
-  }
+  // function handleAbsentToggle(p: ParticipantWithPlayer, absent: boolean) {
+  //   const status: ParticipantStatus = absent
+  //     ? "absent"
+  //     : p.status === "absent"
+  //       ? "confirmed"
+  //       : p.status;
+  //   const is_billable = defaultBillableForStatus(status);
+  //   void patchParticipant(
+  //     p.id,
+  //     { status, is_billable },
+  //     { status, is_billable },
+  //   );
+  // }
 
   function handleBillableToggle(p: ParticipantWithPlayer, value: boolean) {
     void patchParticipant(p.id, { is_billable: value }, { is_billable: value });
