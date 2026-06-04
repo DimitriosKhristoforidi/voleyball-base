@@ -42,6 +42,7 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const gameId = body?.game_id as string | undefined;
+    const withImage = body?.with_image === true;
     if (!gameId) {
       return jsonResponse({ error: "game_id is required" }, 400);
     }
@@ -72,7 +73,7 @@ Deno.serve(async (req) => {
     }
 
     const text = buildReminderMessage(game, publicAppUrl);
-    const imageUrl = await resolveReminderImageUrl(admin);
+    const imageUrl = withImage ? await resolveReminderImageUrl(admin) : null;
     const bot = new Bot(botToken);
     await sendTelegramReminder(bot, chatId, text, imageUrl);
 
@@ -84,7 +85,7 @@ Deno.serve(async (req) => {
 
     if (updateError) throw updateError;
 
-    return jsonResponse({ ok: true, sent_at: sentAt });
+    return jsonResponse({ ok: true, sent_at: sentAt, with_image: withImage });
   } catch (err) {
     console.error("send-game-reminder:", err);
     const message = err instanceof Error ? err.message : "Unknown error";

@@ -19,7 +19,12 @@ import { TelegramMessageModal } from "@/components/games/TelegramMessageModal";
 import { gameParticipantsService, gamesService } from "@/services/gamesService";
 import { playersService } from "@/services/playersService";
 import { telegramService } from "@/services/telegramService";
-import { formatDateRu, formatMinutesRu, formatTimeRange, isGameTomorrow } from "@/lib/date";
+import {
+  formatDateRu,
+  formatMinutesRu,
+  formatTimeRange,
+  isGameTomorrow,
+} from "@/lib/date";
 import { getPublicGameUrl } from "@/lib/publicGameUrl";
 import {
   calculateParticipantPayments,
@@ -64,7 +69,9 @@ export default function GameDetailPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [telegramOpen, setTelegramOpen] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
-  const [reminderSending, setReminderSending] = useState(false);
+  const [reminderSending, setReminderSending] = useState<
+    "text" | "image" | null
+  >(null);
   const [removeTarget, setRemoveTarget] =
     useState<ParticipantWithPlayer | null>(null);
 
@@ -243,19 +250,19 @@ export default function GameDetailPage() {
     await refresh();
   }
 
-  async function handleSendTelegramReminder() {
+  async function handleSendTelegramReminder(withImage: boolean) {
     if (!game) return;
-    setReminderSending(true);
+    setReminderSending(withImage ? "image" : "text");
     setError(null);
     try {
-      await telegramService.sendGameReminder(game.id);
+      await telegramService.sendGameReminder(game.id, withImage);
       await refresh();
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Не удалось отправить напоминание",
       );
     } finally {
-      setReminderSending(false);
+      setReminderSending(null);
     }
   }
 
@@ -290,7 +297,9 @@ export default function GameDetailPage() {
               onPress={async () => {
                 if (!game) return;
                 try {
-                  await navigator.clipboard.writeText(getPublicGameUrl(game.id));
+                  await navigator.clipboard.writeText(
+                    getPublicGameUrl(game.id),
+                  );
                   setLinkCopied(true);
                   window.setTimeout(() => setLinkCopied(false), 1500);
                 } catch {
@@ -305,11 +314,23 @@ export default function GameDetailPage() {
             </Button>
             <Button
               variant="secondary"
-              isPending={reminderSending}
-              isDisabled={game.status === "cancelled"}
-              onPress={handleSendTelegramReminder}
+              isPending={reminderSending === "text"}
+              isDisabled={
+                game.status === "cancelled" || reminderSending !== null
+              }
+              onPress={() => handleSendTelegramReminder(false)}
             >
-              Напоминание в группу
+              Напоминание (Без QR)
+            </Button>
+            <Button
+              variant="secondary"
+              isPending={reminderSending === "image"}
+              isDisabled={
+                game.status === "cancelled" || reminderSending !== null
+              }
+              onPress={() => handleSendTelegramReminder(true)}
+            >
+              Напоминание (QR)
             </Button>
             <Button variant="primary" onPress={() => setAddOpen(true)}>
               Добавить участников

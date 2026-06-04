@@ -7,9 +7,12 @@ export interface SendReminderResult {
 
 export const telegramService = {
   /** Send day-before style reminder to the configured Telegram group. */
-  async sendGameReminder(gameId: string): Promise<SendReminderResult> {
+  async sendGameReminder(
+    gameId: string,
+    withImage: boolean,
+  ): Promise<SendReminderResult> {
     const { data, error } = await supabase.functions.invoke("send-game-reminder", {
-      body: { game_id: gameId },
+      body: { game_id: gameId, with_image: withImage },
     });
 
     if (error) {

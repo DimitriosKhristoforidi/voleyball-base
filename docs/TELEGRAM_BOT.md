@@ -110,11 +110,14 @@ If `bot_token_set` is `false`, add `TELEGRAM_BOT_TOKEN` in Edge Function secrets
 
 ## 6. Use in the admin panel
 
-On **Game detail** → **«Напоминание в группу»** sends a Russian reminder to the group:
+On **Game detail** there are two buttons:
 
-- **Photo** from Supabase Storage (if `TELEGRAM_REMINDER_IMAGE_PATH` or `TELEGRAM_REMINDER_IMAGE_URL` is set)
-- Date, time, venue, map link
-- Full player list + public view link
+- **«Напоминание (текст)»** — text only (same as automatic cron)
+- **«Напоминание (с картинкой)»** — photo from Storage + caption (requires image secrets below)
+
+Both include date, time, venue, map link, and full player list.
+
+**Automatic** `daily-game-reminders` always sends **text only** (no image).
 
 Your project already has a public bucket `Image` with an uploaded photo — set:
 
