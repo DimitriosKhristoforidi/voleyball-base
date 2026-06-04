@@ -75,6 +75,20 @@ export function isDateInFutureOrToday(isoDate: string): boolean {
   return isoDate >= todayISO();
 }
 
+/** YYYY-MM-DD for tomorrow in the given IANA timezone (default Bishkek). */
+export function tomorrowISO(timeZone = "Asia/Bishkek"): string {
+  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  return tomorrow.toLocaleDateString("en-CA", { timeZone });
+}
+
+/** True when game_date is tomorrow in the given timezone. */
+export function isGameTomorrow(
+  gameDate: string,
+  timeZone = "Asia/Bishkek",
+): boolean {
+  return gameDate === tomorrowISO(timeZone);
+}
+
 /**
  * Compute the duration in minutes between two HH:MM[:SS] strings.
  * Returns null if either time is missing or the values are unparseable.

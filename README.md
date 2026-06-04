@@ -126,6 +126,9 @@ create policy players_admin_only on public.players
 - **Telegram message** - generates a Russian message based on
   the game, venue and confirmed/attended participants; copy
   button.
+- **Telegram bot** - send day-before reminders to your group from
+  the game detail page (Supabase Edge Functions + grammY). See
+  [docs/TELEGRAM_BOT.md](docs/TELEGRAM_BOT.md).
 
 ## Notes on design choices
 

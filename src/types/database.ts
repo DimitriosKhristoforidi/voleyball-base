@@ -88,6 +88,7 @@ export type Database = {
           start_time: string;
           status: Database["public"]["Enums"]["game_status"];
           title: string | null;
+          telegram_reminder_sent_at: string | null;
           total_cost: number | null;
           updated_at: string;
           venue_id: string | null;
@@ -104,6 +105,7 @@ export type Database = {
           start_time: string;
           status?: Database["public"]["Enums"]["game_status"];
           title?: string | null;
+          telegram_reminder_sent_at?: string | null;
           total_cost?: number | null;
           updated_at?: string;
           venue_id?: string | null;
@@ -120,6 +122,7 @@ export type Database = {
           start_time?: string;
           status?: Database["public"]["Enums"]["game_status"];
           title?: string | null;
+          telegram_reminder_sent_at?: string | null;
           total_cost?: number | null;
           updated_at?: string;
           venue_id?: string | null;

@@ -18,7 +18,8 @@ import { AddParticipantsModal } from "@/components/games/AddParticipantsModal";
 import { TelegramMessageModal } from "@/components/games/TelegramMessageModal";
 import { gameParticipantsService, gamesService } from "@/services/gamesService";
 import { playersService } from "@/services/playersService";
-import { formatDateRu, formatMinutesRu, formatTimeRange } from "@/lib/date";
+import { telegramService } from "@/services/telegramService";
+import { formatDateRu, formatMinutesRu, formatTimeRange, isGameTomorrow } from "@/lib/date";
 import { getPublicGameUrl } from "@/lib/publicGameUrl";
 import {
   calculateParticipantPayments,
@@ -63,6 +64,7 @@ export default function GameDetailPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [telegramOpen, setTelegramOpen] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [reminderSending, setReminderSending] = useState(false);
   const [removeTarget, setRemoveTarget] =
     useState<ParticipantWithPlayer | null>(null);
 
@@ -241,6 +243,22 @@ export default function GameDetailPage() {
     await refresh();
   }
 
+  async function handleSendTelegramReminder() {
+    if (!game) return;
+    setReminderSending(true);
+    setError(null);
+    try {
+      await telegramService.sendGameReminder(game.id);
+      await refresh();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Не удалось отправить напоминание",
+      );
+    } finally {
+      setReminderSending(false);
+    }
+  }
+
   if (loading) return <LoadingState />;
   if (!game || !breakdown) {
     return (
@@ -285,6 +303,14 @@ export default function GameDetailPage() {
             <Button variant="secondary" onPress={() => setTelegramOpen(true)}>
               Сообщение в Telegram
             </Button>
+            <Button
+              variant="secondary"
+              isPending={reminderSending}
+              isDisabled={game.status === "cancelled"}
+              onPress={handleSendTelegramReminder}
+            >
+              Напоминание в группу
+            </Button>
             <Button variant="primary" onPress={() => setAddOpen(true)}>
               Добавить участников
             </Button>
@@ -295,6 +321,20 @@ export default function GameDetailPage() {
       {error && (
         <div className="mb-3 rounded-md bg-danger-soft px-3 py-2 text-sm text-danger-soft-foreground">
           {error}
+        </div>
+      )}
+
+      {game.telegram_reminder_sent_at && (
+        <div className="mb-3 rounded-md border border-border bg-surface-secondary px-3 py-2 text-sm text-muted">
+          Напоминание в Telegram отправлено:{" "}
+          {new Date(game.telegram_reminder_sent_at).toLocaleString("ru-RU")}
+        </div>
+      )}
+
+      {game.status !== "cancelled" && !isGameTomorrow(game.game_date) && (
+        <div className="mb-3 rounded-md border border-dashed border-border px-3 py-2 text-sm text-muted">
+          Игра не завтра — кнопка всё равно отправит текст «Завтра игра». Для
+          автоматической рассылки за день до игры настройте cron (см. README).
         </div>
       )}
 
