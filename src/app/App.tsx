@@ -3,7 +3,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { LoadingStateScreen } from "@/components/common/LoadingState";
-import { lazy, Suspense } from "react";
+import { lazy } from "react";
 
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
 const PlayersPage = lazy(() => import("@/pages/PlayersPage"));
@@ -17,28 +17,26 @@ export function App() {
   const { session, loading } = useAuth();
 
   return (
-    <Suspense fallback={<LoadingStateScreen />}>
-      <Routes>
-        <Route path="/games/:id/view" element={<PublicGamePage />} />
+    <Routes>
+      <Route path="/games/:id/view" element={<PublicGamePage />} />
 
-        {loading ? (
-          <Route path="*" element={<LoadingStateScreen />} />
-        ) : !session ? (
-          <>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="*" element={<Navigate to="/login" replace />} />
-          </>
-        ) : (
-          <Route element={<AppLayout />}>
-            <Route path="/" element={<DashboardPage />} />
-            <Route path="/players" element={<PlayersPage />} />
-            <Route path="/venues" element={<VenuesPage />} />
-            <Route path="/games" element={<GamesPage />} />
-            <Route path="/games/:id" element={<GameDetailPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
-        )}
-      </Routes>
-    </Suspense>
+      {loading ? (
+        <Route path="*" element={<LoadingStateScreen />} />
+      ) : !session ? (
+        <>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </>
+      ) : (
+        <Route element={<AppLayout />}>
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/players" element={<PlayersPage />} />
+          <Route path="/venues" element={<VenuesPage />} />
+          <Route path="/games" element={<GamesPage />} />
+          <Route path="/games/:id" element={<GameDetailPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      )}
+    </Routes>
   );
 }
