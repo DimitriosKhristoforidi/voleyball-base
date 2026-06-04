@@ -1,4 +1,5 @@
 import { formatDateRu, formatTimeRange } from "./date";
+import { getPublicGameUrl } from "./publicGameUrl";
 import {
   calculateParticipantPayments,
   formatAmount,
@@ -63,6 +64,9 @@ export function buildTelegramMessage(
   if (game.venue?.map_url) {
     lines.push(`🗺 Карта: ${game.venue.map_url}`);
   }
+
+  lines.push("");
+  lines.push(`🔗 ${getPublicGameUrl(game.id)}`);
 
   // Participant list
   const eligible = game.participants

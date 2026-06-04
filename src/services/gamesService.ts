@@ -12,6 +12,7 @@ import type {
   GameWithVenue,
   ParticipantStatus,
   ParticipantWithPlayer,
+  PublicGameView,
 } from "@/types/domain";
 
 export interface GamesListFilter {
@@ -81,6 +82,16 @@ export const gamesService = {
     return { ...game, participants };
   },
 
+  /** Public share view — works without authentication via RPC. */
+  async getPublicView(id: string): Promise<PublicGameView | null> {
+    const { data, error } = await supabase.rpc("get_public_game", {
+      p_game_id: id,
+    });
+    if (error) throw error;
+    if (data == null) return null;
+    return parsePublicGameView(data);
+  },
+
   async create(payload: GameInsert): Promise<Game> {
     const { data, error } = await supabase
       .from("games")
@@ -107,6 +118,46 @@ export const gamesService = {
     if (error) throw error;
   },
 };
+
+function parsePublicGameView(data: unknown): PublicGameView | null {
+  if (!data || typeof data !== "object" || !("id" in data)) return null;
+  const raw = data as Record<string, unknown>;
+  const players = Array.isArray(raw.players)
+    ? raw.players.map((p) => {
+        const row = p as Record<string, unknown>;
+        return {
+          full_name: String(row.full_name ?? ""),
+          telegram_username:
+            row.telegram_username != null
+              ? String(row.telegram_username)
+              : null,
+        };
+      })
+    : [];
+
+  let venue: PublicGameView["venue"] = null;
+  if (raw.venue && typeof raw.venue === "object") {
+    const v = raw.venue as Record<string, unknown>;
+    venue = {
+      name: String(v.name ?? ""),
+      address: v.address != null ? String(v.address) : null,
+      map_url: v.map_url != null ? String(v.map_url) : null,
+    };
+  }
+
+  return {
+    id: String(raw.id),
+    title: raw.title != null ? String(raw.title) : null,
+    game_date: String(raw.game_date),
+    start_time: String(raw.start_time),
+    end_time: raw.end_time != null ? String(raw.end_time) : null,
+    status: raw.status as PublicGameView["status"],
+    max_players:
+      raw.max_players != null ? Number(raw.max_players) : null,
+    venue,
+    players,
+  };
+}
 
 export const gameParticipantsService = {
   async listByGame(gameId: string): Promise<ParticipantWithPlayer[]> {

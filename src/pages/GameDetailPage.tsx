@@ -19,6 +19,7 @@ import { TelegramMessageModal } from "@/components/games/TelegramMessageModal";
 import { gameParticipantsService, gamesService } from "@/services/gamesService";
 import { playersService } from "@/services/playersService";
 import { formatDateRu, formatMinutesRu, formatTimeRange } from "@/lib/date";
+import { getPublicGameUrl } from "@/lib/publicGameUrl";
 import {
   calculateParticipantPayments,
   defaultBillableForStatus,
@@ -61,6 +62,7 @@ export default function GameDetailPage() {
 
   const [addOpen, setAddOpen] = useState(false);
   const [telegramOpen, setTelegramOpen] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [removeTarget, setRemoveTarget] =
     useState<ParticipantWithPlayer | null>(null);
 
@@ -264,6 +266,21 @@ export default function GameDetailPage() {
           <>
             <Button variant="secondary" onPress={() => navigate("/games")}>
               Назад
+            </Button>
+            <Button
+              variant="secondary"
+              onPress={async () => {
+                if (!game) return;
+                try {
+                  await navigator.clipboard.writeText(getPublicGameUrl(game.id));
+                  setLinkCopied(true);
+                  window.setTimeout(() => setLinkCopied(false), 1500);
+                } catch {
+                  // ignore
+                }
+              }}
+            >
+              {linkCopied ? "Ссылка скопирована ✓" : "Ссылка для игроков"}
             </Button>
             <Button variant="secondary" onPress={() => setTelegramOpen(true)}>
               Сообщение в Telegram

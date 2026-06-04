@@ -211,7 +211,12 @@ export type Database = {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      get_public_game: {
+        Args: { p_game_id: string };
+        Returns: Json;
+      };
+    };
     // NOTE: `cost_source` is a CHECK-constrained text column in Postgres,
     // not a real Postgres enum. We model it as a TS literal type here for safety.
     Enums: {

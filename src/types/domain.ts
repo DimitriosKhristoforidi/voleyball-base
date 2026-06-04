@@ -37,6 +37,30 @@ export type GameDetail = GameWithVenue & {
   participants: ParticipantWithPlayer[];
 };
 
+/** Sanitized game payload returned by `get_public_game` RPC (all participants, no payment fields). */
+export interface PublicGameVenue {
+  name: string;
+  address: string | null;
+  map_url: string | null;
+}
+
+export interface PublicGamePlayer {
+  full_name: string;
+  telegram_username: string | null;
+}
+
+export interface PublicGameView {
+  id: string;
+  title: string | null;
+  game_date: string;
+  start_time: string;
+  end_time: string | null;
+  status: GameStatus;
+  max_players: number | null;
+  venue: PublicGameVenue | null;
+  players: PublicGamePlayer[];
+}
+
 // ---------- Constant arrays for select inputs / labels ----------
 
 export const GAME_STATUSES: readonly GameStatus[] = [
