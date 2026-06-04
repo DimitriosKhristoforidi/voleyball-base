@@ -29,6 +29,7 @@ function collectFiles(dir) {
     "_shared/cors.ts",
     "_shared/game-data.ts",
     "_shared/telegram-message.ts",
+    "_shared/telegram-send.ts",
   ]) {
     const p = path.join(base, rel);
     if (!fs.existsSync(p)) throw new Error(`Missing ${p}`);

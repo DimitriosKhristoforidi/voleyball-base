@@ -5,6 +5,10 @@ import {
   fetchGamesDueForReminder,
 } from "./_shared/game-data.ts";
 import { buildReminderMessage } from "./_shared/telegram-message.ts";
+import {
+  resolveReminderImageUrl,
+  sendTelegramReminder,
+} from "./_shared/telegram-send.ts";
 import { handleOptions, jsonResponse } from "./_shared/cors.ts";
 
 /**
@@ -39,6 +43,7 @@ Deno.serve(async (req) => {
     const admin = createAdminClient();
     const games = await fetchGamesDueForReminder(admin);
     const bot = new Bot(botToken);
+    const imageUrl = await resolveReminderImageUrl(admin);
 
     const sent: string[] = [];
     const errors: { game_id: string; error: string }[] = [];
@@ -46,9 +51,7 @@ Deno.serve(async (req) => {
     for (const game of games) {
       try {
         const text = buildReminderMessage(game, publicAppUrl);
-        await bot.api.sendMessage(chatId, text, {
-          link_preview_options: { is_disabled: true },
-        });
+        await sendTelegramReminder(bot, chatId, text, imageUrl);
         const sentAt = new Date().toISOString();
         await admin
           .from("games")

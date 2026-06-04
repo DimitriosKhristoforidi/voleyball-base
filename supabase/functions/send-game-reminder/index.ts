@@ -3,6 +3,10 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 import { Bot } from "npm:grammy@^1.34.0";
 import { createAdminClient, fetchGameForTelegram } from "./_shared/game-data.ts";
 import { buildReminderMessage } from "./_shared/telegram-message.ts";
+import {
+  resolveReminderImageUrl,
+  sendTelegramReminder,
+} from "./_shared/telegram-send.ts";
 import { handleOptions, jsonResponse } from "./_shared/cors.ts";
 
 Deno.serve(async (req) => {
@@ -68,8 +72,9 @@ Deno.serve(async (req) => {
     }
 
     const text = buildReminderMessage(game, publicAppUrl);
+    const imageUrl = await resolveReminderImageUrl(admin);
     const bot = new Bot(botToken);
-    await bot.api.sendMessage(chatId, text, { link_preview_options: { is_disabled: true } });
+    await sendTelegramReminder(bot, chatId, text, imageUrl);
 
     const sentAt = new Date().toISOString();
     const { error: updateError } = await admin

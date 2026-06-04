@@ -32,6 +32,10 @@ In [Supabase Dashboard](https://supabase.com/dashboard) → Project → **Edge F
 | `WEBHOOK_SECRET` | Alias for `FUNCTION_SECRET` |
 | `TELEGRAM_GROUP_CHAT_ID` | From `/chatid` in the group |
 | `PUBLIC_APP_URL` | `https://your-app.vercel.app` (for links in messages) |
+| `TELEGRAM_REMINDER_IMAGE_BUCKET` | Storage bucket name (default: `Image`) |
+| `TELEGRAM_REMINDER_IMAGE_PATH` | File path in bucket, e.g. `photo_2026-06-04 22.21.47.jpeg` |
+| `TELEGRAM_REMINDER_IMAGE_URL` | Optional: full public URL instead of bucket + path |
+| `TELEGRAM_REMINDER_IMAGE_SIGNED` | Set to `true` if the bucket is **not** public (uses signed URL) |
 | `CRON_SECRET` | Random long string (for automatic daily reminders) |
 
 `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` are set automatically for Edge Functions.
@@ -108,9 +112,18 @@ If `bot_token_set` is `false`, add `TELEGRAM_BOT_TOKEN` in Edge Function secrets
 
 On **Game detail** → **«Напоминание в группу»** sends a Russian reminder to the group:
 
-- Title: «Завтра игра»
+- **Photo** from Supabase Storage (if `TELEGRAM_REMINDER_IMAGE_PATH` or `TELEGRAM_REMINDER_IMAGE_URL` is set)
 - Date, time, venue, map link
 - Full player list + public view link
+
+Your project already has a public bucket `Image` with an uploaded photo — set:
+
+```
+TELEGRAM_REMINDER_IMAGE_BUCKET=Image
+TELEGRAM_REMINDER_IMAGE_PATH=photo_2026-06-04 22.21.47.jpeg
+```
+
+(Use the exact file name from Storage → Buckets → Image.)
 
 Best practice: click **the day before** the game (the message always says «завтра»).
 
