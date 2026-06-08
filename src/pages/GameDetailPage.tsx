@@ -19,12 +19,7 @@ import { TelegramMessageModal } from "@/components/games/TelegramMessageModal";
 import { gameParticipantsService, gamesService } from "@/services/gamesService";
 import { playersService } from "@/services/playersService";
 import { telegramService } from "@/services/telegramService";
-import {
-  formatDateRu,
-  formatMinutesRu,
-  formatTimeRange,
-  isGameTomorrow,
-} from "@/lib/date";
+import { formatDateRu, formatMinutesRu, formatTimeRange } from "@/lib/date";
 import { getPublicGameUrl } from "@/lib/publicGameUrl";
 import {
   calculateParticipantPayments,
@@ -349,13 +344,6 @@ export default function GameDetailPage() {
         <div className="mb-3 rounded-md border border-border bg-surface-secondary px-3 py-2 text-sm text-muted">
           Напоминание в Telegram отправлено:{" "}
           {new Date(game.telegram_reminder_sent_at).toLocaleString("ru-RU")}
-        </div>
-      )}
-
-      {game.status !== "cancelled" && !isGameTomorrow(game.game_date) && (
-        <div className="mb-3 rounded-md border border-dashed border-border px-3 py-2 text-sm text-muted">
-          Игра не завтра — кнопка всё равно отправит текст «Завтра игра». Для
-          автоматической рассылки за день до игры настройте cron (см. README).
         </div>
       )}
 

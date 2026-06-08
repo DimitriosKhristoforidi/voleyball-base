@@ -36,18 +36,18 @@ In [Supabase Dashboard](https://supabase.com/dashboard) → Project → **Edge F
 | `TELEGRAM_REMINDER_IMAGE_PATH` | File path in bucket, e.g. `photo_2026-06-04 22.21.47.jpeg` |
 | `TELEGRAM_REMINDER_IMAGE_URL` | Optional: full public URL instead of bucket + path |
 | `TELEGRAM_REMINDER_IMAGE_SIGNED` | Set to `true` if the bucket is **not** public (uses signed URL) |
-| `CRON_SECRET` | Random long string (for automatic daily reminders) |
 
 `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` are set automatically for Edge Functions.
+
+Reminders are **manual only** — sent from the admin panel. There is no automatic/scheduled sending.
 
 ## 4. Deploy Edge Functions
 
 ```bash
 supabase link --project-ref <your-project-ref>
-supabase secrets set TELEGRAM_BOT_TOKEN=... TELEGRAM_GROUP_CHAT_ID=... PUBLIC_APP_URL=... CRON_SECRET=...
-supabase functions deploy send-game-reminder
-supabase functions deploy daily-game-reminders --no-verify-jwt
-supabase functions deploy telegram-bot --no-verify-jwt
+supabase secrets set TELEGRAM_BOT_TOKEN=... TELEGRAM_GROUP_CHAT_ID=... PUBLIC_APP_URL=...
+supabase functions deploy send-game-reminder --use-api
+supabase functions deploy telegram-bot --use-api --no-verify-jwt
 ```
 
 ## 5. Register the webhook (required — without this, Start shows “An error occurred”)
@@ -110,14 +110,12 @@ If `bot_token_set` is `false`, add `TELEGRAM_BOT_TOKEN` in Edge Function secrets
 
 ## 6. Use in the admin panel
 
-On **Game detail** there are two buttons:
+On **Game detail** there are two buttons (both **manual**):
 
-- **«Напоминание (текст)»** — text only (same as automatic cron)
-- **«Напоминание (с картинкой)»** — photo from Storage + caption (requires image secrets below)
+- **«Напоминание (текст)»** — text only
+- **«Напоминание (с картинкой)»** — photo from Storage + caption + «Оплата по N» line (requires image secrets below)
 
-Both include date, time, venue, map link, and full player list.
-
-**Automatic** `daily-game-reminders` always sends **text only** (no image).
+Both include the game name, date, time, venue, map link, and full player list.
 
 Your project already has a public bucket `Image` with an uploaded photo — set:
 
@@ -128,19 +126,7 @@ TELEGRAM_REMINDER_IMAGE_PATH=photo_2026-06-04 22.21.47.jpeg
 
 (Use the exact file name from Storage → Buckets → Image.)
 
-Best practice: click **the day before** the game (the message always says «завтра»).
-
-## 7. Automatic reminders (optional)
-
-Function `daily-game-reminders` sends reminders for **planned** games whose `game_date` is **tomorrow** (timezone `Asia/Bishkek`) and have not been sent yet.
-
-Schedule in Supabase Dashboard → **Integrations** → **Cron** (or `pg_cron`):
-
-- **Schedule:** `0 9 * * *` (09:00 UTC daily — adjust to your timezone)
-- **HTTP POST** to:
-  `https://<PROJECT_REF>.supabase.co/functions/v1/daily-game-reminders`
-- **Header:** `x-cron-secret: <your CRON_SECRET>`
-- **Body:** `{}`
+There is **no automatic sending** — you decide when to send from the admin panel.
 
 ## Functions
 
@@ -148,4 +134,3 @@ Schedule in Supabase Dashboard → **Integrations** → **Cron** (or `pg_cron`):
 |----------|------|---------|
 | `telegram-bot` | Webhook secret | `/start`, `/chatid` |
 | `send-game-reminder` | User JWT | Manual send from admin UI |
-| `daily-game-reminders` | `x-cron-secret` | Automatic day-before send |

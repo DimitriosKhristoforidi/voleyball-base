@@ -72,7 +72,9 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Cannot remind for a cancelled game" }, 400);
     }
 
-    const text = buildReminderMessage(game, publicAppUrl);
+    const text = buildReminderMessage(game, publicAppUrl, {
+      includePaymentLine: withImage,
+    });
     const imageUrl = withImage ? await resolveReminderImageUrl(admin) : null;
     const bot = new Bot(botToken);
     await sendTelegramReminder(bot, chatId, text, imageUrl);

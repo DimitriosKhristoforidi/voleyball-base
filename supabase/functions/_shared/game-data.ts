@@ -1,5 +1,11 @@
 import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2";
 
+export interface ParticipantBillingRow {
+  status: string;
+  is_billable: boolean;
+  played_minutes: number | null;
+}
+
 export interface GameRow {
   id: string;
   title: string | null;
@@ -9,6 +15,7 @@ export interface GameRow {
   status: string;
   max_players: number | null;
   notes: string | null;
+  total_cost: number | null;
   telegram_reminder_sent_at: string | null;
   venue: {
     name: string;
@@ -17,6 +24,7 @@ export interface GameRow {
     currency: string;
   } | null;
   players: { full_name: string; telegram_username: string | null }[];
+  participants_billing: ParticipantBillingRow[];
 }
 
 export function createAdminClient(): SupabaseClient {
@@ -44,6 +52,7 @@ export async function fetchGameForTelegram(
       status,
       max_players,
       notes,
+      total_cost,
       telegram_reminder_sent_at,
       venue:venues ( name, address, map_url, currency )
     `,
@@ -56,13 +65,23 @@ export async function fetchGameForTelegram(
 
   const { data: participants, error: pErr } = await admin
     .from("game_participants")
-    .select("created_at, player:players ( full_name, telegram_username )")
+    .select(
+      "created_at, status, is_billable, played_minutes, player:players ( full_name, telegram_username )",
+    )
     .eq("game_id", gameId)
     .order("created_at", { ascending: true });
 
   if (pErr) throw pErr;
 
+  const participants_billing: ParticipantBillingRow[] = [];
   const players = (participants ?? []).map((row) => {
+    participants_billing.push({
+      status: String(row.status),
+      is_billable: Boolean(row.is_billable),
+      played_minutes: row.played_minutes != null
+        ? Number(row.played_minutes)
+        : null,
+    });
     const p = row.player as {
       full_name: string;
       telegram_username: string | null;
@@ -85,38 +104,10 @@ export async function fetchGameForTelegram(
     status: game.status,
     max_players: game.max_players,
     notes: game.notes,
+    total_cost: game.total_cost != null ? Number(game.total_cost) : null,
     telegram_reminder_sent_at: game.telegram_reminder_sent_at,
     venue,
     players,
+    participants_billing,
   };
-}
-
-/** Games scheduled for tomorrow (Asia/Bishkek) that have not been reminded yet. */
-export async function fetchGamesDueForReminder(
-  admin: SupabaseClient,
-): Promise<GameRow[]> {
-  const tomorrow = tomorrowISOInTimeZone("Asia/Bishkek");
-
-  const { data: games, error } = await admin
-    .from("games")
-    .select("id")
-    .eq("game_date", tomorrow)
-    .eq("status", "planned")
-    .is("telegram_reminder_sent_at", null);
-
-  if (error) throw error;
-  if (!games?.length) return [];
-
-  const rows: GameRow[] = [];
-  for (const g of games) {
-    const row = await fetchGameForTelegram(admin, g.id);
-    if (row) rows.push(row);
-  }
-  return rows;
-}
-
-function tomorrowISOInTimeZone(timeZone: string): string {
-  const now = new Date();
-  const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-  return tomorrow.toLocaleDateString("en-CA", { timeZone });
 }

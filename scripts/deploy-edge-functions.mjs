@@ -30,6 +30,7 @@ function collectFiles(dir) {
     "_shared/game-data.ts",
     "_shared/telegram-message.ts",
     "_shared/telegram-send.ts",
+    "_shared/telegram-payments.ts",
   ]) {
     const p = path.join(base, rel);
     if (!fs.existsSync(p)) throw new Error(`Missing ${p}`);
@@ -69,11 +70,6 @@ const telegramBot = fs.readFileSync(
 );
 
 await deploy("send-game-reminder", true, collectFiles("send-game-reminder"));
-await deploy(
-  "daily-game-reminders",
-  false,
-  collectFiles("daily-game-reminders"),
-);
 await deploy("telegram-bot", false, [
   { name: "index.ts", content: telegramBot },
 ]);
