@@ -1,4 +1,8 @@
 import type { GameRow } from "./game-data.ts";
+import {
+  computeCeilPerPersonPayment,
+  mapCurrencyLabel,
+} from "./telegram-payments.ts";
 
 const MONTHS_RU = [
   "января",
@@ -25,12 +29,17 @@ const DAYS_RU = [
   "Суббота",
 ];
 
+export interface ReminderMessageOptions {
+  /** Adds «Оплата по N» line (image reminders only). */
+  includePaymentLine?: boolean;
+}
+
 export function buildReminderMessage(
   game: GameRow,
   publicAppUrl: string,
+  options: ReminderMessageOptions = {},
 ): string {
   const lines: string[] = [];
-  lines.push("⏰ Напоминание! Завтра игра 🏐");
   if (game.title) {
     lines.push(game.title);
   }
@@ -49,6 +58,17 @@ export function buildReminderMessage(
 
   if (game.venue?.map_url) {
     lines.push(`🗺 ${game.venue.map_url}`);
+  }
+
+  if (options.includePaymentLine) {
+    const perPerson = computeCeilPerPersonPayment(game);
+    if (perPerson != null) {
+      const currency = game.venue?.currency
+        ? mapCurrencyLabel(game.venue.currency)
+        : "сом";
+      lines.push("");
+      lines.push(`Оплата по ${perPerson} ${currency}`);
+    }
   }
 
   if (publicAppUrl) {
