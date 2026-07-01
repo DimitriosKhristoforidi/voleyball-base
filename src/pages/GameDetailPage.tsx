@@ -1,6 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Button, Card, Input, Link as HeroLink, Table } from "@/components/ui/hero";
+import { ChevronDown, QrCode } from "lucide-react";
+import {
+  Button,
+  Card,
+  Input,
+  Link as HeroLink,
+  Table,
+} from "@/components/ui/hero";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import { PageHeader } from "@/components/common/PageHeader";
 import { LoadingState } from "@/components/common/LoadingState";
@@ -304,29 +317,33 @@ export default function GameDetailPage() {
             >
               {linkCopied ? "Ссылка скопирована ✓" : "Ссылка для игроков"}
             </Button>
-            <Button variant="secondary" onPress={() => setTelegramOpen(true)}>
+            {/* <Button variant="secondary" onPress={() => setTelegramOpen(true)}>
               Сообщение в Telegram
-            </Button>
-            <Button
-              variant="secondary"
-              isPending={reminderSending === "text"}
-              isDisabled={
-                game.status === "cancelled" || reminderSending !== null
-              }
-              onPress={() => handleSendTelegramReminder(false)}
-            >
-              Напоминание (Без QR)
-            </Button>
-            <Button
-              variant="secondary"
-              isPending={reminderSending === "image"}
-              isDisabled={
-                game.status === "cancelled" || reminderSending !== null
-              }
-              onPress={() => handleSendTelegramReminder(true)}
-            >
-              Напоминание (QR)
-            </Button>
+            </Button> */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="secondary"
+                  isPending={reminderSending !== null}
+                  isDisabled={game.status === "cancelled"}
+                >
+                  Напоминание
+                  <ChevronDown className="size-4 opacity-70" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onSelect={() => handleSendTelegramReminder(false)}
+                >
+                  Без QR
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() => handleSendTelegramReminder(true)}
+                >
+                  <QrCode />С QR
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button variant="primary" onPress={() => setAddOpen(true)}>
               Добавить участников
             </Button>
@@ -347,87 +364,96 @@ export default function GameDetailPage() {
         </div>
       )}
 
-      {/* Info row */}
-      <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
-        <InfoCard label="Статус">
-          <GameStatusChip status={game.status} />
-        </InfoCard>
-        <InfoCard label="Площадка">
-          <div className="text-sm">
-            {game.venue?.name ?? "-"}
-            {game.venue?.address && (
-              <div className="text-xs text-muted">{game.venue.address}</div>
-            )}
-          </div>
-          {game.venue?.map_url && (
-            <HeroLink
-              href={game.venue.map_url}
-              target="_blank"
-              rel="noreferrer noopener"
-            >
-              На карте
-              <HeroLink.Icon />
-            </HeroLink>
-          )}
-        </InfoCard>
-        <InfoCard label="Длительность">
-          <div className="text-sm">
-            {formatMinutesRu(breakdown.game_duration_minutes)}
-          </div>
-          {game.max_players && (
-            <div className="text-xs text-muted">Лимит: {game.max_players}</div>
-          )}
-        </InfoCard>
-        <InfoCard label="Общая стоимость">
-          <div className="text-sm">
-            {game.total_cost != null
-              ? `${formatAmount(game.total_cost)} ${currency}`
-              : "-"}
-          </div>
-          {game.cost_source === "venue_auto" && game.total_cost != null && (
-            <div className="text-xs text-accent">Авто из цены площадки</div>
-          )}
-        </InfoCard>
-      </div>
+      {/* Two consolidated cards: game info + finance */}
+      <div className="mb-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <Card>
+          <Card.Content>
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted">
+              Об игре
+            </div>
+            <dl className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+              <DetailRow label="Статус">
+                <GameStatusChip status={game.status} />
+              </DetailRow>
+              <DetailRow label="Длительность">
+                {formatMinutesRu(breakdown.game_duration_minutes)}
+                {game.max_players != null && (
+                  <span className="text-muted"> · лимит {game.max_players}</span>
+                )}
+              </DetailRow>
+              <DetailRow label="Площадка" className="sm:col-span-2">
+                {game.venue?.name ?? "-"}
+                {game.venue?.address && (
+                  <span className="block text-xs text-muted">
+                    {game.venue.address}
+                  </span>
+                )}
+                {game.venue?.map_url && (
+                  <HeroLink
+                    href={game.venue.map_url}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="mt-1 text-xs"
+                  >
+                    На карте
+                    <HeroLink.Icon />
+                  </HeroLink>
+                )}
+              </DetailRow>
+            </dl>
+          </Card.Content>
+        </Card>
 
-      {/* Money summary */}
-      <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-        <SummaryStat
-          label="Общая стоимость"
-          value={
-            game.total_cost != null
-              ? `${formatAmount(game.total_cost)} ${currency}`
-              : "-"
-          }
-        />
-        <SummaryStat
-          label="Общее игровое время"
-          value={formatMinutesRu(breakdown.total_billable_minutes)}
-        />
-        <SummaryStat
-          label="Оплачено"
-          value={`${formatAmount(breakdown.collected)} ${currency}`}
-          tone="success"
-        />
-        <SummaryStat
-          label="Осталось собрать"
-          value={
-            breakdown.remaining != null
-              ? `${formatAmount(breakdown.remaining)} ${currency}`
-              : "-"
-          }
-          tone={
-            breakdown.remaining != null && breakdown.remaining > 0
-              ? "warning"
-              : "default"
-          }
-        />
-        <SummaryStat label="Оплатили" value={breakdown.paid_count} />
-        <SummaryStat
-          label="Не оплатили"
-          value={breakdown.unpaid_count}
-          tone={breakdown.unpaid_count > 0 ? "warning" : "default"}
-        />
+        <Card>
+          <Card.Content>
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted">
+              Финансы
+            </div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
+              <StatItem
+                label="Общая стоимость"
+                value={
+                  game.total_cost != null
+                    ? `${formatAmount(game.total_cost)} ${currency}`
+                    : "-"
+                }
+                hint={
+                  game.cost_source === "venue_auto" && game.total_cost != null
+                    ? "Авто из цены площадки"
+                    : undefined
+                }
+              />
+              <StatItem
+                label="Игровое время"
+                value={formatMinutesRu(breakdown.total_billable_minutes)}
+              />
+              <StatItem
+                label="Оплачено"
+                value={`${formatAmount(breakdown.collected)} ${currency}`}
+                tone="success"
+              />
+              <StatItem
+                label="Осталось собрать"
+                value={
+                  breakdown.remaining != null
+                    ? `${formatAmount(breakdown.remaining)} ${currency}`
+                    : "-"
+                }
+                tone={
+                  breakdown.remaining != null && breakdown.remaining > 0
+                    ? "warning"
+                    : "default"
+                }
+              />
+              <StatItem label="Оплатили" value={breakdown.paid_count} />
+              <StatItem
+                label="Не оплатили"
+                value={breakdown.unpaid_count}
+                tone={breakdown.unpaid_count > 0 ? "warning" : "default"}
+              />
+            </div>
+          </Card.Content>
+        </Card>
       </div>
 
       {game.status === "cancelled" && (
@@ -637,32 +663,31 @@ export default function GameDetailPage() {
   );
 }
 
-function InfoCard({
+function DetailRow({
   label,
   children,
+  className,
 }: {
   label: string;
   children: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <Card variant="default">
-      <Card.Content className="gap-1">
-        <div className="text-xs uppercase tracking-wide text-muted">
-          {label}
-        </div>
-        {children}
-      </Card.Content>
-    </Card>
+    <div className={className}>
+      <dt className="text-xs uppercase tracking-wide text-muted">{label}</dt>
+      <dd className="mt-0.5 text-sm">{children}</dd>
+    </div>
   );
 }
 
-interface SummaryStatProps {
+interface StatItemProps {
   label: string;
   value: number | string;
   tone?: "default" | "warning" | "success";
+  hint?: string;
 }
 
-function SummaryStat({ label, value, tone = "default" }: SummaryStatProps) {
+function StatItem({ label, value, tone = "default", hint }: StatItemProps) {
   const toneClass =
     tone === "warning"
       ? "text-warning"
@@ -670,14 +695,11 @@ function SummaryStat({ label, value, tone = "default" }: SummaryStatProps) {
         ? "text-success"
         : "text-foreground";
   return (
-    <Card>
-      <Card.Content className="gap-1">
-        <div className="text-xs uppercase tracking-wide text-muted">
-          {label}
-        </div>
-        <div className={`text-base font-semibold ${toneClass}`}>{value}</div>
-      </Card.Content>
-    </Card>
+    <div>
+      <div className="text-xs uppercase tracking-wide text-muted">{label}</div>
+      <div className={`text-base font-semibold ${toneClass}`}>{value}</div>
+      {hint && <div className="text-xs text-accent">{hint}</div>}
+    </div>
   );
 }
 
