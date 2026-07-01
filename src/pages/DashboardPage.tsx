@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, Card, Table } from "@heroui/react";
+import {
+  ArrowRight,
+  CalendarClock,
+  CircleAlert,
+  Users,
+  Volleyball,
+  type LucideIcon,
+} from "lucide-react";
+import { Button, Card, Table } from "@/components/ui/hero";
+import { cn } from "@/lib/utils";
 
 import { PageHeader } from "@/components/common/PageHeader";
 import { LoadingState } from "@/components/common/LoadingState";
@@ -69,11 +78,20 @@ export default function DashboardPage() {
       )}
 
       <div className="mb-6 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Предстоящие игры" value={data.upcoming.length} />
-        <StatCard label="Активные игроки" value={data.activePlayers.length} />
+        <StatCard
+          label="Предстоящие игры"
+          value={data.upcoming.length}
+          icon={Volleyball}
+        />
+        <StatCard
+          label="Активные игроки"
+          value={data.activePlayers.length}
+          icon={Users}
+        />
         <StatCard
           label="Неоплаченные участия"
           value={data.unpaid.length}
+          icon={CircleAlert}
           tone={data.unpaid.length > 0 ? "warning" : "default"}
         />
         <StatCard
@@ -86,6 +104,7 @@ export default function DashboardPage() {
                 )}`
               : "-"
           }
+          icon={CalendarClock}
         />
       </div>
 
@@ -99,7 +118,8 @@ export default function DashboardPage() {
                 variant="ghost"
                 onPress={() => navigate("/games")}
               >
-                Все игры →
+                Все игры
+                <ArrowRight className="size-4" />
               </Button>
             </div>
             {data.upcoming.length === 0 ? (
@@ -180,7 +200,8 @@ export default function DashboardPage() {
                       variant="ghost"
                       onPress={() => navigate(`/games/${p.game_id}`)}
                     >
-                      К игре →
+                      К игре
+                      <ArrowRight className="size-4" />
                     </Button>
                   </li>
                 ))}
@@ -196,22 +217,35 @@ export default function DashboardPage() {
 interface StatCardProps {
   label: string;
   value: number | string;
+  icon: LucideIcon;
   tone?: "default" | "warning";
 }
 
-function StatCard({ label, value, tone = "default" }: StatCardProps) {
+function StatCard({ label, value, icon: Icon, tone = "default" }: StatCardProps) {
+  const warn = tone === "warning" && Number(value) > 0;
   return (
-    <Card>
-      <Card.Content className="gap-1">
-        <div className="text-xs uppercase tracking-wide text-muted">
-          {label}
+    <Card className="relative overflow-hidden">
+      <Card.Content className="gap-2">
+        <div className="flex items-start justify-between gap-2">
+          <div className="text-xs font-medium uppercase tracking-wide text-muted">
+            {label}
+          </div>
+          <span
+            className={cn(
+              "flex size-9 shrink-0 items-center justify-center rounded-xl",
+              warn
+                ? "bg-warning-soft text-warning-soft-foreground"
+                : "bg-accent-soft text-accent-soft-foreground",
+            )}
+          >
+            <Icon className="size-5" />
+          </span>
         </div>
         <div
-          className={
-            tone === "warning" && Number(value) > 0
-              ? "text-2xl font-semibold text-warning"
-              : "text-2xl font-semibold"
-          }
+          className={cn(
+            "text-2xl font-semibold tracking-tight",
+            warn && "text-warning",
+          )}
         >
           {value}
         </div>

@@ -1,5 +1,8 @@
-import { Input, Label, TextArea, TextField } from "@heroui/react";
 import type { HTMLInputTypeAttribute } from "react";
+import { useId } from "react";
+import { Input } from "./input";
+import { Label } from "./label";
+import { Textarea } from "./textarea";
 
 interface BaseFieldProps {
   label?: string;
@@ -27,7 +30,7 @@ interface AppInputProps extends BaseFieldProps {
   variant?: "primary" | "secondary";
 }
 
-/** TextField + Label + Input compound (HeroUI v3). */
+/** Labeled text input. */
 export function AppInput({
   label,
   value,
@@ -42,24 +45,30 @@ export function AppInput({
   variant,
   className,
 }: AppInputProps) {
+  const id = useId();
   return (
-    <TextField
-      value={value}
-      onChange={onChange}
-      isRequired={isRequired}
-      isDisabled={isDisabled}
-      className={className}
-    >
-      {label && <Label>{label}</Label>}
+    <div className="flex flex-col gap-1.5">
+      {label && (
+        <Label htmlFor={id}>
+          {label}
+          {isRequired && <span className="ml-0.5 text-danger">*</span>}
+        </Label>
+      )}
       <Input
+        id={id}
         type={type}
         inputMode={inputMode}
         placeholder={placeholder}
         autoFocus={autoFocus}
         autoComplete={autoComplete}
+        required={isRequired}
+        disabled={isDisabled}
         variant={variant}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={className}
       />
-    </TextField>
+    </div>
   );
 }
 
@@ -68,7 +77,7 @@ interface AppTextareaProps extends BaseFieldProps {
   variant?: "primary" | "secondary";
 }
 
-/** TextField + Label + TextArea compound (HeroUI v3). */
+/** Labeled textarea. */
 export function AppTextarea({
   label,
   value,
@@ -80,21 +89,27 @@ export function AppTextarea({
   variant,
   className,
 }: AppTextareaProps) {
+  const id = useId();
   return (
-    <TextField
-      value={value}
-      onChange={onChange}
-      isRequired={isRequired}
-      isDisabled={isDisabled}
-      className={className}
-    >
-      {label && <Label>{label}</Label>}
-      <TextArea
+    <div className="flex flex-col gap-1.5">
+      {label && (
+        <Label htmlFor={id}>
+          {label}
+          {isRequired && <span className="ml-0.5 text-danger">*</span>}
+        </Label>
+      )}
+      <Textarea
+        id={id}
         rows={rows}
         placeholder={placeholder}
+        required={isRequired}
+        disabled={isDisabled}
         variant={variant}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={className}
         style={{ resize: "vertical" }}
       />
-    </TextField>
+    </div>
   );
 }

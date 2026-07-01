@@ -1,5 +1,14 @@
-import { AlertDialog, Button } from "@heroui/react";
+import { AlertTriangle, HelpCircle } from "lucide-react";
 import { useState } from "react";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -35,42 +44,49 @@ export function ConfirmDialog({
   }
 
   return (
-    <AlertDialog.Backdrop
-      isOpen={isOpen}
+    <AlertDialog
+      open={isOpen}
       onOpenChange={(open) => {
-        if (!open) onClose();
+        if (!open && !loading) onClose();
       }}
     >
-      <AlertDialog.Container size="sm">
-        <AlertDialog.Dialog>
-          <AlertDialog.Header>
-            <AlertDialog.Icon status={destructive ? "danger" : "accent"} />
-            <AlertDialog.Heading>{title}</AlertDialog.Heading>
-          </AlertDialog.Header>
-          {description && (
-            <AlertDialog.Body>
-              <p className="text-sm text-muted">{description}</p>
-            </AlertDialog.Body>
-          )}
-          <AlertDialog.Footer>
-            <Button
-              slot="close"
-              variant="secondary"
-              isDisabled={loading}
-              onPress={onClose}
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <div className="flex items-start gap-3">
+            <span
+              className={
+                destructive
+                  ? "flex size-9 shrink-0 items-center justify-center rounded-full bg-danger-soft text-danger-soft-foreground"
+                  : "flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-soft-foreground"
+              }
             >
-              {cancelLabel}
-            </Button>
-            <Button
-              variant={destructive ? "danger" : "primary"}
-              isPending={loading}
-              onPress={handleConfirm}
-            >
-              {confirmLabel}
-            </Button>
-          </AlertDialog.Footer>
-        </AlertDialog.Dialog>
-      </AlertDialog.Container>
-    </AlertDialog.Backdrop>
+              {destructive ? (
+                <AlertTriangle className="size-5" />
+              ) : (
+                <HelpCircle className="size-5" />
+              )}
+            </span>
+            <div className="flex flex-col gap-1 pt-1">
+              <AlertDialogTitle>{title}</AlertDialogTitle>
+              {description && (
+                <AlertDialogDescription>{description}</AlertDialogDescription>
+              )}
+            </div>
+          </div>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <Button variant="secondary" isDisabled={loading} onPress={onClose}>
+            {cancelLabel}
+          </Button>
+          <Button
+            variant={destructive ? "danger" : "primary"}
+            isPending={loading}
+            onPress={handleConfirm}
+          >
+            {confirmLabel}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

@@ -1,6 +1,13 @@
-import { Drawer } from "@heroui/react";
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import {
+  Sheet,
+  SheetBody,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Brand } from "./Brand";
 import { NavLinks } from "./NavLinks";
 
 interface MobileNavDrawerProps {
@@ -18,25 +25,16 @@ export function MobileNavDrawer({ isOpen, onOpenChange }: MobileNavDrawerProps) 
   }, [location.pathname]);
 
   return (
-    <Drawer.Backdrop isOpen={isOpen} onOpenChange={onOpenChange}>
-      <Drawer.Content placement="left">
-        <Drawer.Dialog
-          aria-label="Меню"
-          className="flex w-72 max-w-[85vw] flex-col"
-        >
-          <Drawer.Header>
-            <Drawer.Heading>
-              <span className="flex items-center gap-2">
-                <span className="text-xl">🏐</span>
-                <span>Волейбол · Админка</span>
-              </span>
-            </Drawer.Heading>
-          </Drawer.Header>
-          <Drawer.Body>
-            <NavLinks onNavigate={() => onOpenChange(false)} />
-          </Drawer.Body>
-        </Drawer.Dialog>
-      </Drawer.Content>
-    </Drawer.Backdrop>
+    <Sheet open={isOpen} onOpenChange={onOpenChange}>
+      <SheetContent side="left" aria-label="Меню">
+        <SheetHeader>
+          <SheetTitle className="sr-only">Меню навигации</SheetTitle>
+          <Brand />
+        </SheetHeader>
+        <SheetBody>
+          <NavLinks onNavigate={() => onOpenChange(false)} />
+        </SheetBody>
+      </SheetContent>
+    </Sheet>
   );
 }

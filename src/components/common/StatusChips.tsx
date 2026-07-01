@@ -1,4 +1,4 @@
-import { Chip } from "@heroui/react";
+import { Chip } from "@/components/ui/badge";
 import type {
   GameStatus,
   ParticipantStatus,

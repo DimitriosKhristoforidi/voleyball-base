@@ -1,4 +1,4 @@
-import { Button } from "@heroui/react";
+import { Button } from "@/components/ui/hero";
 import { useEffect, useState, type FormEvent } from "react";
 import {
   isPlayerPosition,

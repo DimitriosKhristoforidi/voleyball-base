@@ -1,4 +1,4 @@
-import { Spinner } from "@heroui/react";
+import { Spinner } from "@/components/ui/spinner";
 
 export function LoadingState({ label = "Загрузка..." }: { label?: string }) {
   return (

@@ -1,4 +1,5 @@
-import { Chip, cn } from "@heroui/react";
+import { Chip } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { PLAYER_POSITION_LABEL_RU, isPlayerPosition } from "@/types/domain";
 import { useEffect, useState } from "react";
 

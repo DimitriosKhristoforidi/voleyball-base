@@ -1,5 +1,6 @@
-import { Label, Switch } from "@heroui/react";
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
+import { Label } from "./label";
+import { Switch } from "./switch";
 
 interface AppSwitchProps {
   isSelected: boolean;
@@ -9,7 +10,7 @@ interface AppSwitchProps {
   ariaLabel?: string;
 }
 
-/** Thin wrapper around HeroUI v3 Switch compound API. */
+/** Switch with an optional inline label. */
 export function AppSwitch({
   isSelected,
   onChange,
@@ -17,21 +18,21 @@ export function AppSwitch({
   label,
   ariaLabel,
 }: AppSwitchProps) {
+  const id = useId();
   return (
-    <Switch
-      isSelected={isSelected}
-      onChange={onChange}
-      isDisabled={isDisabled}
-      aria-label={!label ? ariaLabel : undefined}
-    >
-      <Switch.Control>
-        <Switch.Thumb />
-      </Switch.Control>
+    <div className="flex items-center gap-2.5">
+      <Switch
+        id={id}
+        checked={isSelected}
+        onCheckedChange={onChange}
+        disabled={isDisabled}
+        aria-label={!label ? ariaLabel : undefined}
+      />
       {label && (
-        <Switch.Content>
-          <Label>{label}</Label>
-        </Switch.Content>
+        <Label htmlFor={id} className="cursor-pointer font-normal">
+          {label}
+        </Label>
       )}
-    </Switch>
+    </div>
   );
 }

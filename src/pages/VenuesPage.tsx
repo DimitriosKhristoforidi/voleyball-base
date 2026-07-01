@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Button, Link as HeroLink, Table } from "@heroui/react";
+import { Button, Link as HeroLink, Table } from "@/components/ui/hero";
 
 import { PageHeader } from "@/components/common/PageHeader";
 import { LoadingState } from "@/components/common/LoadingState";

@@ -1,4 +1,4 @@
-import { Button, Input, ScrollShadow } from "@heroui/react";
+import { Button, Input, ScrollShadow } from "@/components/ui/hero";
 import { useEffect, useMemo, useState } from "react";
 import { AppCheckbox } from "@/components/ui/AppCheckbox";
 import { AppModal } from "@/components/ui/AppModal";

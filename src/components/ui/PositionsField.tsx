@@ -1,9 +1,10 @@
-import { Label, ToggleButton, ToggleButtonGroup } from "@heroui/react";
 import {
   PLAYER_POSITION_LABEL_RU,
   PLAYER_POSITIONS,
   type PlayerPosition,
 } from "@/types/domain";
+import { Label } from "./label";
+import { ToggleGroup, ToggleGroupItem } from "./toggle-group";
 
 interface PositionsFieldProps {
   label?: string;
@@ -14,7 +15,7 @@ interface PositionsFieldProps {
 
 /**
  * Multi-select for volleyball positions rendered as a row of toggle chips.
- * Backed by HeroUI's ToggleButtonGroup in `multiple` selection mode.
+ * Backed by Radix ToggleGroup in `multiple` selection mode.
  */
 export function PositionsField({
   label = "Позиции",
@@ -25,32 +26,22 @@ export function PositionsField({
   return (
     <div className="flex flex-col gap-2">
       <Label>{label}</Label>
-      <ToggleButtonGroup
-        selectionMode="multiple"
-        selectedKeys={value}
-        onSelectionChange={(keys) => {
-          const next: PlayerPosition[] = [];
+      <ToggleGroup
+        type="multiple"
+        value={value}
+        onValueChange={(next: string[]) => {
           // Preserve the canonical order from PLAYER_POSITIONS for stable output.
-          for (const pos of PLAYER_POSITIONS) {
-            if (keys.has(pos)) next.push(pos);
-          }
-          onChange(next);
+          const ordered = PLAYER_POSITIONS.filter((pos) => next.includes(pos));
+          onChange(ordered);
         }}
-        isDisabled={isDisabled}
-        isDetached
-        className="flex flex-wrap gap-2"
+        disabled={isDisabled}
       >
         {PLAYER_POSITIONS.map((pos) => (
-          <ToggleButton
-            key={pos}
-            id={pos}
-            size="sm"
-            variant="default"
-          >
+          <ToggleGroupItem key={pos} value={pos}>
             {PLAYER_POSITION_LABEL_RU[pos]}
-          </ToggleButton>
+          </ToggleGroupItem>
         ))}
-      </ToggleButtonGroup>
+      </ToggleGroup>
     </div>
   );
 }

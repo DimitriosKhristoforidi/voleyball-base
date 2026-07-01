@@ -17,7 +17,15 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          heroui: ["@heroui/react", "@heroui/styles"],
+          radix: [
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-alert-dialog",
+            "@radix-ui/react-select",
+            "@radix-ui/react-checkbox",
+            "@radix-ui/react-switch",
+            "@radix-ui/react-toggle-group",
+            "@radix-ui/react-label",
+          ],
         },
       },
     },

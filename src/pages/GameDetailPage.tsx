@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Button, Card, Input, Link as HeroLink, Table } from "@heroui/react";
+import { Button, Card, Input, Link as HeroLink, Table } from "@/components/ui/hero";
 
 import { PageHeader } from "@/components/common/PageHeader";
 import { LoadingState } from "@/components/common/LoadingState";

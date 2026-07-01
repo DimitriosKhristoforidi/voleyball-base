@@ -1,5 +1,13 @@
-import { Modal } from "@heroui/react";
 import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "./dialog";
 
 interface AppModalProps {
   isOpen: boolean;
@@ -10,17 +18,22 @@ interface AppModalProps {
   size?: "xs" | "sm" | "md" | "lg" | "cover" | "full";
   isDismissable?: boolean;
   dialogClassName?: string;
-  /**
-   * Scroll behavior when content overflows.
-   * - "inside" (default): body scrolls, header/footer stay fixed.
-   * - "outside": entire dialog scrolls within the page.
-   */
+  /** Reserved for API parity; body always scrolls when content overflows. */
   scroll?: "inside" | "outside";
 }
 
+const SIZE_CLASS: Record<NonNullable<AppModalProps["size"]>, string> = {
+  xs: "max-w-xs",
+  sm: "max-w-sm",
+  md: "max-w-lg",
+  lg: "max-w-2xl",
+  cover: "max-w-4xl",
+  full: "max-w-[95vw]",
+};
+
 /**
- * Thin wrapper around HeroUI v3 Modal compound API for controlled, headless
- * modals (no built-in trigger).
+ * Controlled, headless modal (no built-in trigger) built on Radix Dialog.
+ * Preserves the previous AppModal API.
  */
 export function AppModal({
   isOpen,
@@ -31,28 +44,24 @@ export function AppModal({
   size = "md",
   isDismissable = true,
   dialogClassName,
-  scroll = "inside",
 }: AppModalProps) {
-  // `max-h-full` clamps the dialog to the container so the Modal.Body
-  // (which has `flex-1 min-h-0 overflow-y-auto`) can actually scroll.
-  const dialogClasses = ["max-h-full", dialogClassName].filter(Boolean).join(" ");
-
   return (
-    <Modal.Backdrop
-      isOpen={isOpen}
-      onOpenChange={onOpenChange}
-      isDismissable={isDismissable}
-    >
-      <Modal.Container size={size} scroll={scroll}>
-        <Modal.Dialog className={dialogClasses}>
-          <Modal.CloseTrigger />
-          <Modal.Header>
-            <Modal.Heading>{title}</Modal.Heading>
-          </Modal.Header>
-          <Modal.Body>{children}</Modal.Body>
-          {footer && <Modal.Footer>{footer}</Modal.Footer>}
-        </Modal.Dialog>
-      </Modal.Container>
-    </Modal.Backdrop>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent
+        className={cn(SIZE_CLASS[size], dialogClassName)}
+        onInteractOutside={(e) => {
+          if (!isDismissable) e.preventDefault();
+        }}
+        onEscapeKeyDown={(e) => {
+          if (!isDismissable) e.preventDefault();
+        }}
+      >
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        <DialogBody>{children}</DialogBody>
+        {footer && <DialogFooter>{footer}</DialogFooter>}
+      </DialogContent>
+    </Dialog>
   );
 }

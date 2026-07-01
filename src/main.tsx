@@ -5,6 +5,7 @@ import { BrowserRouter } from "react-router-dom";
 import "./styles/global.css";
 import { App } from "./app/App";
 import { AuthProvider } from "./lib/auth";
+import { ThemeProvider } from "./lib/theme";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { LoadingStateScreen } from "./components/common/LoadingState";
@@ -20,13 +21,15 @@ createRoot(root).render(
         v7_relativeSplatPath: true,
       }}
     >
-      <AuthProvider>
-        <Suspense fallback={<LoadingStateScreen />}>
-          <App />
-        </Suspense>
-        <Analytics />
-        <SpeedInsights />
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <Suspense fallback={<LoadingStateScreen />}>
+            <App />
+          </Suspense>
+          <Analytics />
+          <SpeedInsights />
+        </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   </StrictMode>,
 );

@@ -1,5 +1,6 @@
-import { Checkbox, Label } from "@heroui/react";
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
+import { Checkbox } from "./checkbox";
+import { Label } from "./label";
 
 interface AppCheckboxProps {
   isSelected: boolean;
@@ -11,7 +12,7 @@ interface AppCheckboxProps {
   className?: string;
 }
 
-/** Thin wrapper around HeroUI v3 Checkbox compound API. */
+/** Checkbox with an optional inline label. */
 export function AppCheckbox({
   isSelected,
   onChange,
@@ -20,22 +21,21 @@ export function AppCheckbox({
   ariaLabel,
   className,
 }: AppCheckboxProps) {
+  const id = useId();
   return (
-    <Checkbox
-      isSelected={isSelected}
-      onChange={onChange}
-      isDisabled={isDisabled}
-      aria-label={!label ? ariaLabel : undefined}
-      className={className}
-    >
-      <Checkbox.Control>
-        <Checkbox.Indicator />
-      </Checkbox.Control>
+    <div className={`flex items-center gap-2 ${className ?? ""}`}>
+      <Checkbox
+        id={id}
+        checked={isSelected}
+        onCheckedChange={(v) => onChange(v === true)}
+        disabled={isDisabled}
+        aria-label={!label ? ariaLabel : undefined}
+      />
       {label && (
-        <Checkbox.Content>
-          <Label>{label}</Label>
-        </Checkbox.Content>
+        <Label htmlFor={id} className="cursor-pointer font-normal">
+          {label}
+        </Label>
       )}
-    </Checkbox>
+    </div>
   );
 }

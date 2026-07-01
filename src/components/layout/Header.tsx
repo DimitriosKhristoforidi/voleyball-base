@@ -1,5 +1,7 @@
-import { Button } from "@heroui/react";
+import { LogOut, Menu, Moon, Sun } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
+import { useTheme } from "@/lib/theme";
 
 interface HeaderProps {
   onOpenMobileNav: () => void;
@@ -7,10 +9,11 @@ interface HeaderProps {
 
 export function Header({ onOpenMobileNav }: HeaderProps) {
   const { session, signOut } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const email = session?.user?.email ?? "";
 
   return (
-    <header className="flex h-16 items-center justify-between gap-3 border-b border-border bg-surface px-4 sm:px-6">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-border bg-surface/80 px-4 backdrop-blur-md sm:px-6">
       <div className="flex min-w-0 items-center gap-2">
         <Button
           isIconOnly
@@ -20,7 +23,7 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
           onPress={onOpenMobileNav}
           className="md:hidden"
         >
-          <MenuIcon />
+          <Menu className="size-5" />
         </Button>
         <div className="text-sm font-semibold md:hidden">🏐 Волейбол</div>
         <div className="hidden text-sm text-muted md:block">
@@ -29,34 +32,32 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
       </div>
       <div className="flex shrink-0 items-center gap-2 sm:gap-3">
         {email && (
-          <span className="hidden max-w-[180px] truncate text-sm text-foreground sm:inline lg:max-w-none">
+          <span className="hidden max-w-[180px] truncate text-sm text-muted sm:inline lg:max-w-none">
             {email}
           </span>
         )}
-        <Button size="sm" variant="secondary" onPress={() => void signOut()}>
+        <Button
+          isIconOnly
+          size="sm"
+          variant="ghost"
+          aria-label={theme === "dark" ? "Светлая тема" : "Тёмная тема"}
+          onPress={toggleTheme}
+        >
+          {theme === "dark" ? (
+            <Sun className="size-5" />
+          ) : (
+            <Moon className="size-5" />
+          )}
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          startContent={<LogOut className="size-4" />}
+          onPress={() => void signOut()}
+        >
           Выйти
         </Button>
       </div>
     </header>
-  );
-}
-
-function MenuIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      width="20"
-      height="20"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <line x1="4" y1="6" x2="20" y2="6" />
-      <line x1="4" y1="12" x2="20" y2="12" />
-      <line x1="4" y1="18" x2="20" y2="18" />
-    </svg>
   );
 }

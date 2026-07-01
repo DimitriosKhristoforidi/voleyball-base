@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Card, Link as HeroLink, Spinner } from "@heroui/react";
+import { Card, Link as HeroLink, Spinner } from "@/components/ui/hero";
 
 import { gamesService } from "@/services/gamesService";
 import { formatDateRu, formatTimeRange } from "@/lib/date";

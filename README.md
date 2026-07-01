@@ -7,7 +7,7 @@ copy-ready Telegram message in Russian.
 ## Stack
 
 - React 19 + TypeScript + Vite
-- [Hero UI v3](https://heroui.com) (`@heroui/react` + `@heroui/styles`) on top of React Aria
+- [shadcn/ui](https://ui.shadcn.com)-style component library built on Radix UI primitives (`@radix-ui/*`), `class-variance-authority`, and `lucide-react`
 - Tailwind CSS v4 via `@tailwindcss/vite` (CSS-first config, no `tailwind.config.js`)
 - React Router v6
 - Supabase (Postgres, Auth, RLS) via `@supabase/supabase-js`

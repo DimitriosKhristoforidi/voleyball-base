@@ -1,4 +1,4 @@
-import { Button, TextArea } from "@heroui/react";
+import { Button, TextArea } from "@/components/ui/hero";
 import { useMemo, useState } from "react";
 import { AppCheckbox } from "@/components/ui/AppCheckbox";
 import { AppModal } from "@/components/ui/AppModal";

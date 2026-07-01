@@ -1,5 +1,12 @@
-import { Label, ListBox, Select } from "@heroui/react";
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
+import { Label } from "./label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./select";
 
 export interface AppSelectOption<T extends string = string> {
   id: T;
@@ -17,13 +24,13 @@ interface AppSelectProps<T extends string> {
   isDisabled?: boolean;
   variant?: "primary" | "secondary";
   className?: string;
-  /** Render override for the value chip. */
+  /** Render override for the trigger value. */
   renderValue?: (value: T | null) => ReactNode;
 }
 
 /**
- * Thin wrapper around HeroUI v3 Select compound API for the common case:
- * single-value selection from a flat list of `{ id, label }` items.
+ * Single-value select over a flat `{ id, label }` list, backed by Radix.
+ * Preserves the previous HeroUI-era AppSelect API.
  */
 export function AppSelect<T extends string>({
   label,
@@ -33,45 +40,41 @@ export function AppSelect<T extends string>({
   options,
   placeholder = "Выберите",
   isDisabled,
-  variant,
   className,
   renderValue,
 }: AppSelectProps<T>) {
+  const id = useId();
   return (
-    <Select
-      aria-label={ariaLabel}
-      value={value}
-      onChange={(v) => onChange((v as T | null) ?? null)}
-      isDisabled={isDisabled}
-      variant={variant}
-      placeholder={placeholder}
-      className={className}
-    >
-      {label && <Label>{label}</Label>}
-      <Select.Trigger>
-        {renderValue ? (
-          <Select.Value>
-            {(rp) => (rp.isPlaceholder ? placeholder : renderValue(value))}
-          </Select.Value>
-        ) : (
-          <Select.Value />
-        )}
-        <Select.Indicator />
-      </Select.Trigger>
-      <Select.Popover>
-        <ListBox>
+    <div className="flex flex-col gap-1.5">
+      {label && <Label htmlFor={id}>{label}</Label>}
+      <Select
+        value={value ?? undefined}
+        onValueChange={(v) => onChange((v as T) ?? null)}
+        disabled={isDisabled}
+      >
+        <SelectTrigger
+          id={id}
+          aria-label={ariaLabel ?? label}
+          className={className}
+        >
+          {renderValue ? (
+            value ? (
+              renderValue(value)
+            ) : (
+              <span className="text-muted/80">{placeholder}</span>
+            )
+          ) : (
+            <SelectValue placeholder={placeholder} />
+          )}
+        </SelectTrigger>
+        <SelectContent>
           {options.map((opt) => (
-            <ListBox.Item
-              key={opt.id}
-              id={opt.id}
-              textValue={opt.label}
-              isDisabled={opt.isDisabled}
-            >
+            <SelectItem key={opt.id} value={opt.id} disabled={opt.isDisabled}>
               {opt.label}
-            </ListBox.Item>
+            </SelectItem>
           ))}
-        </ListBox>
-      </Select.Popover>
-    </Select>
+        </SelectContent>
+      </Select>
+    </div>
   );
 }

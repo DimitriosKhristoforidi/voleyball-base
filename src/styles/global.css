@@ -1,8 +1,219 @@
 @import "tailwindcss";
-@import "@heroui/styles";
 
-html,
-body,
-#root {
-  height: 100%;
+/* Dark mode driven by a `.dark` class on <html>. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Design tokens. A single palette exposed under two naming schemes:
+ *  - shadcn/ui idiomatic names (primary, secondary, muted-foreground, ...)
+ *  - the app's existing semantic names (surface, accent-soft, danger-soft, ...)
+ * so both shadcn primitives and legacy className usages resolve.
+ */
+:root {
+  --radius: 0.7rem;
+
+  --background: oklch(0.995 0.002 260);
+  --foreground: oklch(0.21 0.024 264);
+
+  --surface: oklch(1 0 0);
+  --surface-foreground: oklch(0.21 0.024 264);
+  --surface-secondary: oklch(0.967 0.006 264);
+
+  --muted: oklch(0.55 0.02 264);
+
+  --border: oklch(0.918 0.008 264);
+  --input: oklch(0.9 0.01 264);
+  --ring: oklch(0.55 0.2 277);
+
+  /* Brand / accent */
+  --accent: oklch(0.55 0.2 277);
+  --accent-foreground: oklch(0.99 0.01 277);
+  --accent-soft: oklch(0.95 0.035 277);
+  --accent-soft-foreground: oklch(0.44 0.17 277);
+
+  --primary: var(--accent);
+  --primary-foreground: var(--accent-foreground);
+  --secondary: oklch(0.967 0.006 264);
+  --secondary-foreground: oklch(0.28 0.02 264);
+
+  --destructive: oklch(0.585 0.22 25);
+  --destructive-foreground: oklch(0.99 0.01 25);
+  --danger: var(--destructive);
+  --danger-foreground: var(--destructive-foreground);
+  --danger-soft: oklch(0.955 0.035 25);
+  --danger-soft-foreground: oklch(0.5 0.19 25);
+
+  --warning: oklch(0.68 0.16 62);
+  --warning-soft: oklch(0.96 0.05 75);
+  --warning-soft-foreground: oklch(0.48 0.12 62);
+
+  --success: oklch(0.62 0.15 155);
+  --success-soft: oklch(0.95 0.05 155);
+  --success-soft-foreground: oklch(0.42 0.12 155);
+
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+  --popover: var(--surface);
+  --popover-foreground: var(--foreground);
+}
+
+.dark {
+  --background: oklch(0.17 0.012 264);
+  --foreground: oklch(0.965 0.005 264);
+
+  --surface: oklch(0.216 0.014 264);
+  --surface-foreground: oklch(0.965 0.005 264);
+  --surface-secondary: oklch(0.27 0.016 264);
+
+  --muted: oklch(0.7 0.02 264);
+
+  --border: oklch(0.32 0.016 264);
+  --input: oklch(0.36 0.016 264);
+  --ring: oklch(0.68 0.17 277);
+
+  --accent: oklch(0.7 0.16 277);
+  --accent-foreground: oklch(0.16 0.02 277);
+  --accent-soft: oklch(0.33 0.07 277);
+  --accent-soft-foreground: oklch(0.88 0.07 277);
+
+  --secondary: oklch(0.28 0.016 264);
+  --secondary-foreground: oklch(0.95 0.006 264);
+
+  --destructive: oklch(0.65 0.2 25);
+  --destructive-foreground: oklch(0.99 0.01 25);
+  --danger-soft: oklch(0.33 0.09 25);
+  --danger-soft-foreground: oklch(0.87 0.09 25);
+
+  --warning: oklch(0.8 0.14 75);
+  --warning-soft: oklch(0.34 0.08 75);
+  --warning-soft-foreground: oklch(0.88 0.09 75);
+
+  --success: oklch(0.72 0.14 155);
+  --success-soft: oklch(0.32 0.07 155);
+  --success-soft-foreground: oklch(0.86 0.09 155);
+
+  --card: var(--surface);
+  --card-foreground: var(--surface-foreground);
+  --popover: var(--surface);
+  --popover-foreground: var(--surface-foreground);
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-surface: var(--surface);
+  --color-surface-foreground: var(--surface-foreground);
+  --color-surface-secondary: var(--surface-secondary);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-soft-foreground: var(--accent-soft-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-soft-foreground: var(--danger-soft-foreground);
+
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-soft-foreground: var(--warning-soft-foreground);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-soft-foreground: var(--success-soft-foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-synthesis-weight: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* Radix open/close animations (no plugin dependency). */
+@keyframes overlay-show {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes content-show {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+@keyframes sheet-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@keyframes popover-show {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-overlay {
+  animation: overlay-show 160ms ease-out;
+}
+.animate-dialog {
+  animation: content-show 170ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.animate-sheet-left {
+  animation: sheet-in-left 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.animate-popover {
+  animation: popover-show 130ms ease-out;
 }
