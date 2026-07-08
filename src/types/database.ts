@@ -26,6 +26,7 @@ export type Database = {
           played_minutes: number | null;
           player_id: string;
           status: Database["public"]["Enums"]["participant_status"];
+          team_id: string | null;
           updated_at: string;
         };
         Insert: {
@@ -41,6 +42,7 @@ export type Database = {
           played_minutes?: number | null;
           player_id: string;
           status?: Database["public"]["Enums"]["participant_status"];
+          team_id?: string | null;
           updated_at?: string;
         };
         Update: {
@@ -56,6 +58,7 @@ export type Database = {
           played_minutes?: number | null;
           player_id?: string;
           status?: Database["public"]["Enums"]["participant_status"];
+          team_id?: string | null;
           updated_at?: string;
         };
         Relationships: [
@@ -71,6 +74,51 @@ export type Database = {
             columns: ["player_id"];
             isOneToOne: false;
             referencedRelation: "players";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "game_participants_team_id_fkey";
+            columns: ["team_id"];
+            isOneToOne: false;
+            referencedRelation: "game_teams";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      game_teams: {
+        Row: {
+          color: string;
+          created_at: string;
+          game_id: string;
+          id: string;
+          name: string;
+          sort_order: number;
+          updated_at: string;
+        };
+        Insert: {
+          color?: string;
+          created_at?: string;
+          game_id: string;
+          id?: string;
+          name: string;
+          sort_order?: number;
+          updated_at?: string;
+        };
+        Update: {
+          color?: string;
+          created_at?: string;
+          game_id?: string;
+          id?: string;
+          name?: string;
+          sort_order?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "game_teams_game_id_fkey";
+            columns: ["game_id"];
+            isOneToOne: false;
+            referencedRelation: "games";
             referencedColumns: ["id"];
           },
         ];

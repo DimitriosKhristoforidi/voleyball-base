@@ -28,6 +28,7 @@ import { PositionChips } from "@/components/players/PositionChips";
 import { AppCheckbox } from "@/components/ui/AppCheckbox";
 import { AppSelect } from "@/components/ui/AppSelect";
 import { AddParticipantsModal } from "@/components/games/AddParticipantsModal";
+import { TeamsBoard } from "@/components/games/TeamsBoard";
 import { TelegramMessageModal } from "@/components/games/TelegramMessageModal";
 import { gameParticipantsService, gamesService } from "@/services/gamesService";
 import { playersService } from "@/services/playersService";
@@ -455,6 +456,13 @@ export default function GameDetailPage() {
           </Card.Content>
         </Card>
       </div>
+
+      <TeamsBoard
+        gameId={game.id}
+        teams={game.teams}
+        participants={game.participants}
+        onChanged={refresh}
+      />
 
       {game.status === "cancelled" && (
         <div className="mb-4 rounded-md border border-danger bg-danger-soft px-3 py-2 text-sm text-danger-soft-foreground">

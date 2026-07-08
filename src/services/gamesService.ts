@@ -8,6 +8,9 @@ import type {
   GameParticipantInsert,
   GameParticipantUpdate,
   GameStatus,
+  GameTeam,
+  GameTeamInsert,
+  GameTeamUpdate,
   GameUpdate,
   GameWithVenue,
   ParticipantStatus,
@@ -78,8 +81,11 @@ export const gamesService = {
   async getDetail(id: string): Promise<GameDetail | null> {
     const game = await gamesService.getById(id);
     if (!game) return null;
-    const participants = await gameParticipantsService.listByGame(id);
-    return { ...game, participants };
+    const [participants, teams] = await Promise.all([
+      gameParticipantsService.listByGame(id),
+      teamsService.listByGame(id),
+    ]);
+    return { ...game, participants, teams };
   },
 
   /** Public share view — works without authentication via RPC. */
@@ -226,6 +232,72 @@ export const gameParticipantsService = {
       .from("game_participants")
       .delete()
       .eq("id", id);
+    if (error) throw error;
+  },
+
+  /** Assign a participant to a team (or NULL to move them to the bench). */
+  async assignTeam(
+    participantId: string,
+    teamId: string | null,
+  ): Promise<void> {
+    const { error } = await supabase
+      .from("game_participants")
+      .update({ team_id: teamId })
+      .eq("id", participantId);
+    if (error) throw error;
+  },
+
+  /** Apply many team assignments at once (used by shuffle/auto-split). */
+  async assignTeamMany(
+    assignments: { participantId: string; teamId: string | null }[],
+  ): Promise<void> {
+    await Promise.all(
+      assignments.map(({ participantId, teamId }) =>
+        gameParticipantsService.assignTeam(participantId, teamId),
+      ),
+    );
+  },
+};
+
+export const teamsService = {
+  async listByGame(gameId: string): Promise<GameTeam[]> {
+    const { data, error } = await supabase
+      .from("game_teams")
+      .select("*")
+      .eq("game_id", gameId)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
+    if (error) throw error;
+    return (data ?? []) as GameTeam[];
+  },
+
+  async create(payload: GameTeamInsert): Promise<GameTeam> {
+    const { data, error } = await supabase
+      .from("game_teams")
+      .insert(payload)
+      .select("*")
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async update(id: string, payload: GameTeamUpdate): Promise<GameTeam> {
+    const { data, error } = await supabase
+      .from("game_teams")
+      .update(payload)
+      .eq("id", id)
+      .select("*")
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * Delete a team. Members are automatically moved to the bench by the
+   * `ON DELETE SET NULL` foreign key on `game_participants.team_id`.
+   */
+  async remove(id: string): Promise<void> {
+    const { error } = await supabase.from("game_teams").delete().eq("id", id);
     if (error) throw error;
   },
 };
