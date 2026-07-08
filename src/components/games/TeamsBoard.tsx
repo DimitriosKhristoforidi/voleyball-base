@@ -1,4 +1,4 @@
-import { ArrowLeftRight, Plus, Shuffle, Users, X } from "lucide-react";
+import { ArrowLeftRight, Plus, Send, Shuffle, Users, X } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -11,6 +11,7 @@ import {
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { gameParticipantsService, teamsService } from "@/services/gamesService";
+import { telegramService } from "@/services/telegramService";
 import { computeAutoSplit } from "@/lib/teams";
 import { cn } from "@/lib/utils";
 import {
@@ -51,6 +52,8 @@ export function TeamsBoard({
 }: TeamsBoardProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const membersByTeam = useMemo(() => {
     const map = new Map<string, ParticipantWithPlayer[]>();
@@ -105,7 +108,25 @@ export function TeamsBoard({
     void run(() => gameParticipantsService.assignTeamMany(assignments));
   }
 
+  const assignedCount = teams.reduce(
+    (n, t) => n + (membersByTeam.map.get(t.id)?.length ?? 0),
+    0,
+  );
   const canShuffle = teams.length >= 2 && participants.length > 0 && !busy;
+  const canSendTeams = assignedCount > 0 && !busy && !sending;
+
+  function sendTeams() {
+    setSending(true);
+    setError(null);
+    setNotice(null);
+    telegramService
+      .sendGameTeams(gameId)
+      .then(() => setNotice("Составы отправлены в Telegram"))
+      .catch((err) =>
+        setError(err instanceof Error ? err.message : "Не удалось отправить"),
+      )
+      .finally(() => setSending(false));
+  }
 
   return (
     <section className="mb-4">
@@ -117,6 +138,17 @@ export function TeamsBoard({
           )}
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="secondary"
+            title="Отправить составы команд в Telegram-группу"
+            startContent={<Send className="size-4" />}
+            isDisabled={!canSendTeams}
+            isPending={sending}
+            onPress={sendTeams}
+          >
+            В Telegram
+          </Button>
           <Button
             size="sm"
             variant="secondary"
@@ -142,6 +174,12 @@ export function TeamsBoard({
       {error && (
         <div className="mb-2 rounded-md bg-danger-soft px-3 py-2 text-sm text-danger-soft-foreground">
           {error}
+        </div>
+      )}
+
+      {notice && (
+        <div className="mb-2 rounded-md bg-success-soft px-3 py-2 text-sm text-success-soft-foreground">
+          {notice}
         </div>
       )}
 

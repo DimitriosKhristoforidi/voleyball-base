@@ -147,6 +147,7 @@ export function isPlayerPosition(value: string): value is PlayerPosition {
 // Each skill is rated 0-5, or NULL when not yet rated. The DB columns are
 // `skill_<name>`; we key everything off those column names directly.
 
+// General physical / mental skills (hexagon).
 export const PLAYER_SKILL_FIELDS = [
   "skill_power",
   "skill_speed",
@@ -156,11 +157,31 @@ export const PLAYER_SKILL_FIELDS = [
   "skill_intelligence",
 ] as const;
 
-export type PlayerSkillField = (typeof PLAYER_SKILL_FIELDS)[number];
+// Volleyball-specific technique skills (pentagon).
+export const PLAYER_VOLLEY_SKILL_FIELDS = [
+  "skill_serve",
+  "skill_block",
+  "skill_set",
+  "skill_attack",
+  "skill_reception",
+] as const;
+
+/** Every skill column, both groups combined. */
+export const PLAYER_ALL_SKILL_FIELDS = [
+  ...PLAYER_SKILL_FIELDS,
+  ...PLAYER_VOLLEY_SKILL_FIELDS,
+] as const;
+
+export type PlayerSkillField =
+  | (typeof PLAYER_SKILL_FIELDS)[number]
+  | (typeof PLAYER_VOLLEY_SKILL_FIELDS)[number];
 
 export const PLAYER_SKILL_MAX = 5;
 
-export const PLAYER_SKILL_LABEL_RU: Record<PlayerSkillField, string> = {
+export const PLAYER_SKILL_LABEL_RU: Record<
+  (typeof PLAYER_SKILL_FIELDS)[number],
+  string
+> = {
   skill_power: "Сила",
   skill_speed: "Скорость",
   skill_jumping: "Прыжок",
@@ -169,21 +190,51 @@ export const PLAYER_SKILL_LABEL_RU: Record<PlayerSkillField, string> = {
   skill_intelligence: "Интеллект",
 };
 
+export const PLAYER_VOLLEY_SKILL_LABEL_RU: Record<
+  (typeof PLAYER_VOLLEY_SKILL_FIELDS)[number],
+  string
+> = {
+  skill_serve: "Подача",
+  skill_block: "Блок",
+  skill_set: "Связка",
+  skill_attack: "Атака",
+  skill_reception: "Прием",
+};
+
+/** Labels for every skill, both groups. */
+export const PLAYER_SKILL_LABEL_ALL: Record<PlayerSkillField, string> = {
+  ...PLAYER_SKILL_LABEL_RU,
+  ...PLAYER_VOLLEY_SKILL_LABEL_RU,
+};
+
+/**
+ * Axis order for the general-skills hexagon: the longest labels
+ * (Выносливость / Интеллект) go top & bottom where they are center-anchored.
+ */
+export const PLAYER_SKILL_RADAR_ORDER = [
+  "skill_stamina",
+  "skill_power",
+  "skill_jumping",
+  "skill_intelligence",
+  "skill_technique",
+  "skill_speed",
+] as const satisfies readonly PlayerSkillField[];
+
 type PlayerSkills = Partial<Record<PlayerSkillField, number | null>>;
 
-/** True if the player has at least one skill rated. */
+/** True if the player has at least one skill (any group) rated. */
 export function playerHasSkills(player: PlayerSkills): boolean {
-  return PLAYER_SKILL_FIELDS.some((f) => player[f] != null);
+  return PLAYER_ALL_SKILL_FIELDS.some((f) => player[f] != null);
 }
 
-/** Sum of all rated skills (unrated skills count as 0). */
+/** Sum of all rated skills across both groups (unrated count as 0). */
 export function playerSkillTotal(player: PlayerSkills): number {
-  return PLAYER_SKILL_FIELDS.reduce((acc, f) => acc + (player[f] ?? 0), 0);
+  return PLAYER_ALL_SKILL_FIELDS.reduce((acc, f) => acc + (player[f] ?? 0), 0);
 }
 
-/** Average of the rated skills (0-5), or null when nothing is rated. */
+/** Average of the rated skills across both groups (0-5), or null. */
 export function playerSkillAverage(player: PlayerSkills): number | null {
-  const rated = PLAYER_SKILL_FIELDS.map((f) => player[f]).filter(
+  const rated = PLAYER_ALL_SKILL_FIELDS.map((f) => player[f]).filter(
     (v): v is number => v != null,
   );
   if (rated.length === 0) return null;

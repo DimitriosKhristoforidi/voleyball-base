@@ -6,6 +6,20 @@ export interface ParticipantBillingRow {
   played_minutes: number | null;
 }
 
+export interface GameTeamRow {
+  id: string;
+  name: string;
+  color: string;
+  sort_order: number;
+}
+
+export interface RosterRow {
+  full_name: string;
+  telegram_username: string | null;
+  team_id: string | null;
+  status: string;
+}
+
 export interface GameRow {
   id: string;
   title: string | null;
@@ -25,6 +39,8 @@ export interface GameRow {
   } | null;
   players: { full_name: string; telegram_username: string | null }[];
   participants_billing: ParticipantBillingRow[];
+  teams: GameTeamRow[];
+  roster: RosterRow[];
 }
 
 export function createAdminClient(): SupabaseClient {
@@ -66,7 +82,7 @@ export async function fetchGameForTelegram(
   const { data: participants, error: pErr } = await admin
     .from("game_participants")
     .select(
-      "created_at, status, is_billable, played_minutes, player:players ( full_name, telegram_username )",
+      "created_at, status, is_billable, played_minutes, team_id, player:players ( full_name, telegram_username )",
     )
     .eq("game_id", gameId)
     .order("created_at", { ascending: true });
@@ -74,7 +90,9 @@ export async function fetchGameForTelegram(
   if (pErr) throw pErr;
 
   const participants_billing: ParticipantBillingRow[] = [];
-  const players = (participants ?? []).map((row) => {
+  const players: GameRow["players"] = [];
+  const roster: RosterRow[] = [];
+  for (const row of participants ?? []) {
     participants_billing.push({
       status: String(row.status),
       is_billable: Boolean(row.is_billable),
@@ -86,11 +104,32 @@ export async function fetchGameForTelegram(
       full_name: string;
       telegram_username: string | null;
     };
-    return {
+    players.push({
       full_name: p.full_name,
       telegram_username: p.telegram_username,
-    };
-  });
+    });
+    roster.push({
+      full_name: p.full_name,
+      telegram_username: p.telegram_username,
+      team_id: row.team_id != null ? String(row.team_id) : null,
+      status: String(row.status),
+    });
+  }
+
+  const { data: teamsData, error: tErr } = await admin
+    .from("game_teams")
+    .select("id, name, color, sort_order")
+    .eq("game_id", gameId)
+    .order("sort_order", { ascending: true });
+
+  if (tErr) throw tErr;
+
+  const teams: GameTeamRow[] = (teamsData ?? []).map((t) => ({
+    id: String(t.id),
+    name: String(t.name),
+    color: String(t.color),
+    sort_order: Number(t.sort_order),
+  }));
 
   const venueRaw = game.venue as GameRow["venue"] | GameRow["venue"][] | null;
   const venue = Array.isArray(venueRaw) ? venueRaw[0] ?? null : venueRaw;
@@ -109,5 +148,7 @@ export async function fetchGameForTelegram(
     venue,
     players,
     participants_billing,
+    teams,
+    roster,
   };
 }

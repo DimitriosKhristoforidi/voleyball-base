@@ -106,6 +106,62 @@ export function buildReminderMessage(
   return lines.join("\n");
 }
 
+const TEAM_COLOR_EMOJI: Record<string, string> = {
+  blue: "🔵",
+  red: "🔴",
+  emerald: "🟢",
+  green: "🟢",
+  amber: "🟡",
+  yellow: "🟡",
+  violet: "🟣",
+  purple: "🟣",
+  rose: "🌹",
+  cyan: "🔷",
+  orange: "🟠",
+};
+
+function teamColorEmoji(color: string): string {
+  return TEAM_COLOR_EMOJI[color] ?? "⚪️";
+}
+
+/** Message listing every team and its roster (used by the "send teams" button). */
+export function buildTeamsMessage(game: GameRow, publicAppUrl: string): string {
+  const lines: string[] = [];
+  const title = game.title?.trim();
+  if (title) {
+    lines.push(title);
+    lines.push("");
+  }
+  lines.push("🏐 Составы команд");
+
+  const sorted = [...game.teams].sort((a, b) => a.sort_order - b.sort_order);
+  for (const team of sorted) {
+    const members = game.roster.filter((r) => r.team_id === team.id);
+    lines.push("");
+    lines.push(`${teamColorEmoji(team.color)} ${team.name} — ${members.length}`);
+    if (members.length === 0) {
+      lines.push("— пусто");
+    } else {
+      members.forEach((m, i) => lines.push(`${i + 1}. ${displayName(m)}`));
+    }
+  }
+
+  const bench = game.roster.filter((r) => r.team_id == null);
+  if (bench.length > 0) {
+    lines.push("");
+    lines.push(`⚪️ Без команды — ${bench.length}`);
+    bench.forEach((m, i) => lines.push(`${i + 1}. ${displayName(m)}`));
+  }
+
+  if (publicAppUrl) {
+    const base = publicAppUrl.replace(/\/$/, "");
+    lines.push("");
+    lines.push(`🔗 ${base}/games/${game.id}/view`);
+  }
+
+  return lines.join("\n");
+}
+
 function displayName(p: {
   full_name: string;
   telegram_username: string | null;

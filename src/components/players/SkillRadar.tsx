@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import {
-  PLAYER_SKILL_LABEL_RU,
+  PLAYER_SKILL_LABEL_ALL,
   PLAYER_SKILL_MAX,
   type PlayerSkillField,
 } from "@/types/domain";
@@ -9,20 +9,10 @@ type Skills = Partial<Record<PlayerSkillField, number | null>>;
 
 interface SkillRadarProps {
   player: Skills;
+  /** Skills to plot, in clockwise order starting from the top vertex. */
+  fields: readonly PlayerSkillField[];
   className?: string;
 }
-
-// Longest labels (Выносливость / Интеллект) go top & bottom where they are
-// center-anchored with symmetric room; shorter ones sit on the diagonals so
-// nothing overflows the viewBox horizontally.
-const AXES: PlayerSkillField[] = [
-  "skill_stamina", // top (Выносливость)
-  "skill_power", // top-right (Сила)
-  "skill_jumping", // bottom-right (Прыжок)
-  "skill_intelligence", // bottom (Интеллект)
-  "skill_technique", // bottom-left (Техника)
-  "skill_speed", // top-left (Скорость)
-];
 
 const W = 330;
 const H = 260;
@@ -37,16 +27,19 @@ function point(angleDeg: number, radius: number): [number, number] {
   return [CX + radius * Math.cos(rad), CY + radius * Math.sin(rad)];
 }
 
-function polygon(radiusForAxis: (i: number) => number): string {
-  return AXES.map((_, i) => {
-    const [x, y] = point(-90 + 60 * i, radiusForAxis(i));
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(" ");
-}
+/** Radar chart of the given player skills (0-5), one axis per field. */
+export function SkillRadar({ player, fields, className }: SkillRadarProps) {
+  const n = fields.length;
+  const angleAt = (i: number) => -90 + (360 / n) * i;
+  const values = fields.map((f) => player[f] ?? 0);
 
-/** Hexagonal radar chart of a player's six skills (0-5). */
-export function SkillRadar({ player, className }: SkillRadarProps) {
-  const values = AXES.map((f) => player[f] ?? 0);
+  const polygon = (radiusForAxis: (i: number) => number): string =>
+    fields
+      .map((_, i) => {
+        const [x, y] = point(angleAt(i), radiusForAxis(i));
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      })
+      .join(" ");
 
   return (
     <svg
@@ -69,11 +62,11 @@ export function SkillRadar({ player, className }: SkillRadarProps) {
       })}
 
       {/* Spokes */}
-      {AXES.map((_, i) => {
-        const [x, y] = point(-90 + 60 * i, R);
+      {fields.map((f, i) => {
+        const [x, y] = point(angleAt(i), R);
         return (
           <line
-            key={i}
+            key={f}
             x1={CX}
             y1={CY}
             x2={x}
@@ -93,14 +86,14 @@ export function SkillRadar({ player, className }: SkillRadarProps) {
       />
 
       {/* Vertices */}
-      {AXES.map((_, i) => {
-        const [x, y] = point(-90 + 60 * i, (R * values[i]) / PLAYER_SKILL_MAX);
-        return <circle key={i} cx={x} cy={y} r={3} className="fill-accent" />;
+      {fields.map((f, i) => {
+        const [x, y] = point(angleAt(i), (R * values[i]) / PLAYER_SKILL_MAX);
+        return <circle key={f} cx={x} cy={y} r={3} className="fill-accent" />;
       })}
 
       {/* Labels (name only; values live in the sliders / bars next to it) */}
-      {AXES.map((field, i) => {
-        const angle = -90 + 60 * i;
+      {fields.map((field, i) => {
+        const angle = angleAt(i);
         const [lx, ly] = point(angle, LABEL_R);
         const cos = Math.cos((angle * Math.PI) / 180);
         const anchor = cos > 0.3 ? "start" : cos < -0.3 ? "end" : "middle";
@@ -113,7 +106,7 @@ export function SkillRadar({ player, className }: SkillRadarProps) {
             dominantBaseline="middle"
             className="fill-current text-[11px] font-medium text-muted"
           >
-            {PLAYER_SKILL_LABEL_RU[field]}
+            {PLAYER_SKILL_LABEL_ALL[field]}
           </text>
         );
       })}

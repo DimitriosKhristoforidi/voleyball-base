@@ -13,10 +13,13 @@ import { playersService } from "@/services/playersService";
 import { cn } from "@/lib/utils";
 import {
   PLAYER_SKILL_FIELDS,
-  PLAYER_SKILL_LABEL_RU,
+  PLAYER_SKILL_LABEL_ALL,
   PLAYER_SKILL_MAX,
+  PLAYER_SKILL_RADAR_ORDER,
+  PLAYER_VOLLEY_SKILL_FIELDS,
   playerHasSkills,
   playerSkillAverage,
+  type PlayerSkillField,
   type Player,
   type PlayerInsert,
 } from "@/types/domain";
@@ -117,19 +120,20 @@ export default function PlayerDetailPage() {
             </div>
 
             {hasSkills ? (
-              <div className="grid grid-cols-1 items-center gap-4 sm:grid-cols-2">
-                <div className="flex justify-center">
-                  <SkillRadar player={player} />
-                </div>
-                <div className="flex flex-col gap-2.5">
-                  {PLAYER_SKILL_FIELDS.map((field) => (
-                    <SkillBar
-                      key={field}
-                      label={PLAYER_SKILL_LABEL_RU[field]}
-                      value={player[field]}
-                    />
-                  ))}
-                </div>
+              <div className="flex flex-col gap-6">
+                <SkillGroup
+                  title="Общие"
+                  radarFields={PLAYER_SKILL_RADAR_ORDER}
+                  barFields={PLAYER_SKILL_FIELDS}
+                  player={player}
+                />
+                <div className="h-px bg-border" />
+                <SkillGroup
+                  title="Волейбольные"
+                  radarFields={PLAYER_VOLLEY_SKILL_FIELDS}
+                  barFields={PLAYER_VOLLEY_SKILL_FIELDS}
+                  player={player}
+                />
               </div>
             ) : (
               <div className="rounded-lg border border-dashed border-border px-6 py-8 text-center">
@@ -219,6 +223,40 @@ function InfoRow({
     <div>
       <dt className="text-xs uppercase tracking-wide text-muted">{label}</dt>
       <dd className="mt-0.5">{children}</dd>
+    </div>
+  );
+}
+
+function SkillGroup({
+  title,
+  radarFields,
+  barFields,
+  player,
+}: {
+  title: string;
+  radarFields: readonly PlayerSkillField[];
+  barFields: readonly PlayerSkillField[];
+  player: Player;
+}) {
+  return (
+    <div>
+      <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">
+        {title}
+      </div>
+      <div className="grid grid-cols-1 items-center gap-4 sm:grid-cols-2">
+        <div className="flex justify-center">
+          <SkillRadar player={player} fields={radarFields} />
+        </div>
+        <div className="flex flex-col gap-2.5">
+          {barFields.map((field) => (
+            <SkillBar
+              key={field}
+              label={PLAYER_SKILL_LABEL_ALL[field]}
+              value={player[field]}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

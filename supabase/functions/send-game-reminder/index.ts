@@ -2,7 +2,10 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { Bot } from "npm:grammy@^1.34.0";
 import { createAdminClient, fetchGameForTelegram } from "./_shared/game-data.ts";
-import { buildReminderMessage } from "./_shared/telegram-message.ts";
+import {
+  buildReminderMessage,
+  buildTeamsMessage,
+} from "./_shared/telegram-message.ts";
 import {
   resolveReminderImageUrl,
   sendTelegramReminder,
@@ -43,6 +46,7 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const gameId = body?.game_id as string | undefined;
     const withImage = body?.with_image === true;
+    const mode = body?.mode === "teams" ? "teams" : "reminder";
     if (!gameId) {
       return jsonResponse({ error: "game_id is required" }, 400);
     }
@@ -69,14 +73,28 @@ Deno.serve(async (req) => {
     }
 
     if (game.status === "cancelled") {
-      return jsonResponse({ error: "Cannot remind for a cancelled game" }, 400);
+      return jsonResponse({ error: "Cannot send for a cancelled game" }, 400);
+    }
+
+    const bot = new Bot(botToken);
+
+    if (mode === "teams") {
+      if (!game.teams || game.teams.length === 0) {
+        return jsonResponse({ error: "Сначала создайте команды" }, 400);
+      }
+      const teamsText = buildTeamsMessage(game, publicAppUrl);
+      await sendTelegramReminder(bot, chatId, teamsText, null);
+      return jsonResponse({
+        ok: true,
+        sent_at: new Date().toISOString(),
+        mode,
+      });
     }
 
     const text = buildReminderMessage(game, publicAppUrl, {
       includePaymentLine: withImage,
     });
     const imageUrl = withImage ? await resolveReminderImageUrl(admin) : null;
-    const bot = new Bot(botToken);
     await sendTelegramReminder(bot, chatId, text, imageUrl);
 
     const sentAt = new Date().toISOString();

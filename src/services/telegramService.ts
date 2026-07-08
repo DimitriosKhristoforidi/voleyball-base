@@ -29,4 +29,25 @@ export const telegramService = {
 
     return { ok: true, sent_at: payload.sent_at };
   },
+
+  /** Send the current team line-ups to the configured Telegram group. */
+  async sendGameTeams(gameId: string): Promise<SendReminderResult> {
+    const { data, error } = await supabase.functions.invoke("send-game-reminder", {
+      body: { game_id: gameId, mode: "teams" },
+    });
+
+    if (error) {
+      throw new Error(error.message || "Не удалось отправить составы");
+    }
+
+    const payload = data as { error?: string; ok?: boolean; sent_at?: string };
+    if (payload?.error) {
+      throw new Error(payload.error);
+    }
+    if (!payload?.ok || !payload.sent_at) {
+      throw new Error("Неожиданный ответ сервера");
+    }
+
+    return { ok: true, sent_at: payload.sent_at };
+  },
 };
