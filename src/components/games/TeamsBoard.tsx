@@ -1,14 +1,15 @@
 import { ArrowLeftRight, Plus, Shuffle, Users, X } from "lucide-react";
-import { useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { createPortal } from "react-dom";
+import { Button } from "@/components/ui/button";
 import { gameParticipantsService, teamsService } from "@/services/gamesService";
 import { computeAutoSplit } from "@/lib/teams";
 import { cn } from "@/lib/utils";
@@ -168,7 +169,7 @@ export function TeamsBoard({
               key={team.id}
               team={team}
               members={membersByTeam.map.get(team.id) ?? []}
-              otherTeams={teams.filter((t) => t.id !== team.id)}
+              teams={teams}
               busy={busy}
               onMove={move}
               onRemove={() => removeTeam(team.id)}
@@ -189,7 +190,7 @@ export function TeamsBoard({
 interface TeamColumnProps {
   team: GameTeam;
   members: ParticipantWithPlayer[];
-  otherTeams: GameTeam[];
+  teams: GameTeam[];
   busy: boolean;
   onMove: (participantId: string, teamId: string | null) => void;
   onRemove: () => void;
@@ -198,7 +199,7 @@ interface TeamColumnProps {
 function TeamColumn({
   team,
   members,
-  otherTeams,
+  teams,
   busy,
   onMove,
   onRemove,
@@ -244,7 +245,7 @@ function TeamColumn({
       <div className="flex min-h-16 flex-col gap-1 p-2 pl-3">
         {members.length === 0 ? (
           <p className="px-1 py-3 text-center text-xs text-muted">
-            Нет игроков. Добавьте через меню ⇆ у игрока.
+            Нет игроков. Выберите команду в списке рядом с игроком.
           </p>
         ) : (
           members.map((m) => (
@@ -253,7 +254,7 @@ function TeamColumn({
               member={m}
               busy={busy}
               currentTeamId={team.id}
-              teams={otherTeams}
+              teams={teams}
               onMove={onMove}
             />
           ))
@@ -320,38 +321,164 @@ function MemberRow({
   return (
     <div className="flex items-center justify-between gap-1 rounded-md border border-border bg-background px-2 py-1.5">
       <span className="truncate text-sm">{member.player.full_name}</span>
-      <DropdownMenu modal={false}>
-        <DropdownMenuTrigger asChild>
-          <Button
-            isIconOnly
-            size="sm"
-            variant="ghost"
-            aria-label="Переместить игрока"
-            isDisabled={busy}
-            className="touch-manipulation"
-          >
-            <ArrowLeftRight className="size-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuLabel>Переместить в</DropdownMenuLabel>
-          {teams.map((t) => (
-            <DropdownMenuItem key={t.id} onSelect={() => onMove(member.id, t.id)}>
-              <span className={cn("size-2.5 rounded-full", colorOf(t.color).dot)} />
-              {t.name}
-            </DropdownMenuItem>
-          ))}
-          {currentTeamId !== null && (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => onMove(member.id, null)}>
-                <Users className="size-4" />
-                На скамейку
-              </DropdownMenuItem>
-            </>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <MoveMenu
+        label={member.player.full_name}
+        currentTeamId={currentTeamId}
+        teams={teams}
+        disabled={busy}
+        onMove={(teamId) => onMove(member.id, teamId)}
+      />
     </div>
+  );
+}
+
+interface MoveMenuProps {
+  label: string;
+  currentTeamId: string | null;
+  teams: GameTeam[];
+  disabled: boolean;
+  onMove: (teamId: string | null) => void;
+}
+
+/**
+ * Custom (non-Radix) dropdown that reliably opens on touch and in an installed
+ * PWA. The menu is portaled to <body> with fixed positioning so the parent
+ * column's `overflow-hidden` cannot clip it.
+ */
+function MoveMenu({
+  label,
+  currentTeamId,
+  teams,
+  disabled,
+  onMove,
+}: MoveMenuProps) {
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number }>({
+    top: 0,
+    left: 0,
+  });
+
+  const options = teams.filter((t) => t.id !== currentTeamId);
+  const itemCount = options.length + (currentTeamId !== null ? 1 : 0);
+
+  const reposition = useCallback(() => {
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    const menuW = 192;
+    const gap = 6;
+    const estH = 34 + itemCount * 38 + 8;
+    let left = rect.right - menuW;
+    left = Math.max(8, Math.min(left, window.innerWidth - menuW - 8));
+    const below = rect.bottom + gap;
+    const top =
+      below + estH > window.innerHeight - 8 && rect.top - gap - estH > 8
+        ? rect.top - gap - estH
+        : below;
+    setPos({ top, left });
+  }, [itemCount]);
+
+  useLayoutEffect(() => {
+    if (open) reposition();
+  }, [open, reposition]);
+
+  useEffect(() => {
+    if (!open) return;
+    function onPointerDown(e: PointerEvent) {
+      const target = e.target as Node;
+      if (menuRef.current?.contains(target)) return;
+      if (triggerRef.current?.contains(target)) return;
+      setOpen(false);
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("keydown", onKeyDown);
+    window.addEventListener("resize", reposition);
+    window.addEventListener("scroll", reposition, true);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("resize", reposition);
+      window.removeEventListener("scroll", reposition, true);
+    };
+  }, [open, reposition]);
+
+  function select(teamId: string | null) {
+    setOpen(false);
+    onMove(teamId);
+  }
+
+  return (
+    <>
+      <Button
+        ref={triggerRef}
+        isIconOnly
+        size="sm"
+        variant="ghost"
+        className="touch-manipulation"
+        aria-label={`Переместить: ${label}`}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        isDisabled={disabled}
+        onPress={() => setOpen((v) => !v)}
+      >
+        <ArrowLeftRight className="size-4" />
+      </Button>
+
+      {open &&
+        createPortal(
+          <div
+            ref={menuRef}
+            role="menu"
+            style={{ position: "fixed", top: pos.top, left: pos.left }}
+            className="z-50 min-w-48 overflow-hidden rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg animate-popover"
+          >
+            <div className="px-2.5 py-1.5 text-xs font-medium text-muted">
+              Переместить в
+            </div>
+            {options.map((t) => (
+              <MenuButton key={t.id} onSelect={() => select(t.id)}>
+                <span
+                  className={cn("size-2.5 rounded-full", colorOf(t.color).dot)}
+                />
+                {t.name}
+              </MenuButton>
+            ))}
+            {currentTeamId !== null && (
+              <>
+                <div className="-mx-1 my-1 h-px bg-border" />
+                <MenuButton onSelect={() => select(null)}>
+                  <Users className="size-4" />
+                  На скамейку
+                </MenuButton>
+              </>
+            )}
+          </div>,
+          document.body,
+        )}
+    </>
+  );
+}
+
+function MenuButton({
+  onSelect,
+  children,
+}: {
+  onSelect: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      onClick={onSelect}
+      className="flex w-full cursor-pointer select-none items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm outline-none transition-colors hover:bg-accent-soft hover:text-accent-soft-foreground [&_svg]:size-4 [&_svg]:shrink-0"
+    >
+      {children}
+    </button>
   );
 }

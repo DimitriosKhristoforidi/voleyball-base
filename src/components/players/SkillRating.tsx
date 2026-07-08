@@ -11,9 +11,9 @@ interface SkillRatingProps {
 /** Segmented 0-5 rating control. Clicking the active value again clears it. */
 export function SkillRating({ label, value, onChange }: SkillRatingProps) {
   return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-sm">{label}</span>
-      <div className="flex items-center gap-1">
+    <div className="flex items-center justify-between gap-2">
+      <span className="min-w-0 flex-1 truncate text-sm">{label}</span>
+      <div className="flex shrink-0 items-center gap-1">
         {Array.from({ length: PLAYER_SKILL_MAX + 1 }, (_, n) => {
           // 0 is only highlighted when the value is exactly 0; any value > 0
           // leaves it inactive. Other cells fill cumulatively up to the value.

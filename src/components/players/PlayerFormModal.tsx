@@ -178,11 +178,11 @@ export function PlayerFormModal({
             <span className="text-sm font-medium">Навыки</span>
             <span className="text-xs text-muted">0–5 · для баланса команд</span>
           </div>
-          <div className="grid gap-4 sm:grid-cols-[190px_1fr] sm:items-center">
-            <div className="flex justify-center">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+            <div className="flex w-full shrink-0 justify-center sm:w-[280px]">
               <SkillRadar player={form.skills} />
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="flex min-w-0 flex-1 flex-col gap-2">
               {PLAYER_SKILL_FIELDS.map((field) => (
                 <SkillRating
                   key={field}

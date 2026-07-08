@@ -12,20 +12,24 @@ interface SkillRadarProps {
   className?: string;
 }
 
-/** Axis order chosen to match the classic stats hexagon layout. */
+// Longest labels (Выносливость / Интеллект) go top & bottom where they are
+// center-anchored with symmetric room; shorter ones sit on the diagonals so
+// nothing overflows the viewBox horizontally.
 const AXES: PlayerSkillField[] = [
-  "skill_power", // top
-  "skill_jumping", // top-right
-  "skill_stamina", // bottom-right
-  "skill_intelligence", // bottom
-  "skill_technique", // bottom-left
-  "skill_speed", // top-left
+  "skill_stamina", // top (Выносливость)
+  "skill_power", // top-right (Сила)
+  "skill_jumping", // bottom-right (Прыжок)
+  "skill_intelligence", // bottom (Интеллект)
+  "skill_technique", // bottom-left (Техника)
+  "skill_speed", // top-left (Скорость)
 ];
 
-const CX = 150;
-const CY = 130;
-const R = 92;
-const LABEL_R = R + 26;
+const W = 330;
+const H = 260;
+const CX = W / 2;
+const CY = 128;
+const R = 84;
+const LABEL_R = R + 15;
 const LEVELS = PLAYER_SKILL_MAX; // 5 rings
 
 function point(angleDeg: number, radius: number): [number, number] {
@@ -44,12 +48,10 @@ function polygon(radiusForAxis: (i: number) => number): string {
 export function SkillRadar({ player, className }: SkillRadarProps) {
   const values = AXES.map((f) => player[f] ?? 0);
 
-  const valuePolygon = polygon((i) => (R * values[i]) / PLAYER_SKILL_MAX);
-
   return (
     <svg
-      viewBox="0 0 300 260"
-      className={cn("h-auto w-full max-w-[320px]", className)}
+      viewBox={`0 0 ${W} ${H}`}
+      className={cn("h-auto w-full max-w-[330px] overflow-visible", className)}
       role="img"
       aria-label="Диаграмма навыков"
     >
@@ -84,7 +86,7 @@ export function SkillRadar({ player, className }: SkillRadarProps) {
 
       {/* Value shape */}
       <polygon
-        points={valuePolygon}
+        points={polygon((i) => (R * values[i]) / PLAYER_SKILL_MAX)}
         className="fill-accent/25 stroke-accent"
         strokeWidth={2}
         strokeLinejoin="round"
@@ -96,7 +98,7 @@ export function SkillRadar({ player, className }: SkillRadarProps) {
         return <circle key={i} cx={x} cy={y} r={3} className="fill-accent" />;
       })}
 
-      {/* Labels */}
+      {/* Labels (name only; values live in the sliders / bars next to it) */}
       {AXES.map((field, i) => {
         const angle = -90 + 60 * i;
         const [lx, ly] = point(angle, LABEL_R);
@@ -111,15 +113,7 @@ export function SkillRadar({ player, className }: SkillRadarProps) {
             dominantBaseline="middle"
             className="fill-current text-[11px] font-medium text-muted"
           >
-            <tspan className="fill-current">
-              {PLAYER_SKILL_LABEL_RU[field]}
-            </tspan>
-            <tspan
-              dx={4}
-              className="fill-foreground font-semibold"
-            >
-              {player[field] ?? "—"}
-            </tspan>
+            {PLAYER_SKILL_LABEL_RU[field]}
           </text>
         );
       })}
