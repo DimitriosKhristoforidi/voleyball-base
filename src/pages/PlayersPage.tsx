@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Star } from "lucide-react";
 import { Button, Chip, Input, Link as HeroLink, Table } from "@/components/ui/hero";
 
 import { PageHeader } from "@/components/common/PageHeader";
@@ -8,9 +10,10 @@ import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { PlayerFormModal } from "@/components/players/PlayerFormModal";
 import { PositionChips } from "@/components/players/PositionChips";
 import { playersService } from "@/services/playersService";
-import type { Player, PlayerInsert } from "@/types/domain";
+import { playerSkillAverage, type Player, type PlayerInsert } from "@/types/domain";
 
 export default function PlayersPage() {
+  const navigate = useNavigate();
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -121,12 +124,13 @@ export default function PlayersPage() {
       ) : (
         <Table>
           <Table.ScrollContainer>
-            <Table.Content aria-label="Игроки" className="min-w-[820px]">
+            <Table.Content aria-label="Игроки" className="min-w-[900px]">
               <Table.Header>
                 <Table.Column isRowHeader>Имя</Table.Column>
                 <Table.Column>Telegram</Table.Column>
                 <Table.Column>Телефон</Table.Column>
                 <Table.Column>Позиции</Table.Column>
+                <Table.Column>Рейтинг</Table.Column>
                 <Table.Column>Статус</Table.Column>
                 <Table.Column>Действия</Table.Column>
               </Table.Header>
@@ -134,7 +138,13 @@ export default function PlayersPage() {
                 {filtered.map((player) => (
                   <Table.Row key={player.id}>
                     <Table.Cell>
-                      <div className="font-medium">{player.full_name}</div>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/players/${player.id}`)}
+                        className="text-left font-medium text-foreground hover:text-accent hover:underline"
+                      >
+                        {player.full_name}
+                      </button>
                       {player.notes && (
                         <div className="text-xs text-muted">{player.notes}</div>
                       )}
@@ -145,6 +155,9 @@ export default function PlayersPage() {
                     <Table.Cell>{player.phone ?? "-"}</Table.Cell>
                     <Table.Cell>
                       <PositionChips positions={player.positions} />
+                    </Table.Cell>
+                    <Table.Cell>
+                      <RatingCell player={player} />
                     </Table.Cell>
                     <Table.Cell>
                       {player.is_active ? (
@@ -224,6 +237,17 @@ function TelegramCell({ player }: { player: Player }) {
       {label}
       <HeroLink.Icon />
     </HeroLink>
+  );
+}
+
+function RatingCell({ player }: { player: Player }) {
+  const avg = playerSkillAverage(player);
+  if (avg == null) return <span className="text-muted">-</span>;
+  return (
+    <span className="inline-flex items-center gap-1 font-medium tabular-nums">
+      <Star className="size-3.5 text-amber-500" />
+      {avg.toFixed(1)}
+    </span>
   );
 }
 

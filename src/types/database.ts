@@ -194,6 +194,12 @@ export type Database = {
           notes: string | null;
           phone: string | null;
           positions: string[] | null;
+          skill_intelligence: number | null;
+          skill_jumping: number | null;
+          skill_power: number | null;
+          skill_speed: number | null;
+          skill_stamina: number | null;
+          skill_technique: number | null;
           telegram_url: string | null;
           telegram_username: string | null;
           updated_at: string;
@@ -206,6 +212,12 @@ export type Database = {
           notes?: string | null;
           phone?: string | null;
           positions?: string[] | null;
+          skill_intelligence?: number | null;
+          skill_jumping?: number | null;
+          skill_power?: number | null;
+          skill_speed?: number | null;
+          skill_stamina?: number | null;
+          skill_technique?: number | null;
           telegram_url?: string | null;
           telegram_username?: string | null;
           updated_at?: string;
@@ -218,6 +230,12 @@ export type Database = {
           notes?: string | null;
           phone?: string | null;
           positions?: string[] | null;
+          skill_intelligence?: number | null;
+          skill_jumping?: number | null;
+          skill_power?: number | null;
+          skill_speed?: number | null;
+          skill_stamina?: number | null;
+          skill_technique?: number | null;
           telegram_url?: string | null;
           telegram_username?: string | null;
           updated_at?: string;

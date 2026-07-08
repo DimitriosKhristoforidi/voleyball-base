@@ -142,6 +142,54 @@ export function isPlayerPosition(value: string): value is PlayerPosition {
   return (PLAYER_POSITIONS as readonly string[]).includes(value);
 }
 
+// ---------- Player skills ----------
+//
+// Each skill is rated 0-5, or NULL when not yet rated. The DB columns are
+// `skill_<name>`; we key everything off those column names directly.
+
+export const PLAYER_SKILL_FIELDS = [
+  "skill_power",
+  "skill_speed",
+  "skill_jumping",
+  "skill_technique",
+  "skill_stamina",
+  "skill_intelligence",
+] as const;
+
+export type PlayerSkillField = (typeof PLAYER_SKILL_FIELDS)[number];
+
+export const PLAYER_SKILL_MAX = 5;
+
+export const PLAYER_SKILL_LABEL_RU: Record<PlayerSkillField, string> = {
+  skill_power: "Сила",
+  skill_speed: "Скорость",
+  skill_jumping: "Прыжок",
+  skill_technique: "Техника",
+  skill_stamina: "Выносливость",
+  skill_intelligence: "Интеллект",
+};
+
+type PlayerSkills = Partial<Record<PlayerSkillField, number | null>>;
+
+/** True if the player has at least one skill rated. */
+export function playerHasSkills(player: PlayerSkills): boolean {
+  return PLAYER_SKILL_FIELDS.some((f) => player[f] != null);
+}
+
+/** Sum of all rated skills (unrated skills count as 0). */
+export function playerSkillTotal(player: PlayerSkills): number {
+  return PLAYER_SKILL_FIELDS.reduce((acc, f) => acc + (player[f] ?? 0), 0);
+}
+
+/** Average of the rated skills (0-5), or null when nothing is rated. */
+export function playerSkillAverage(player: PlayerSkills): number | null {
+  const rated = PLAYER_SKILL_FIELDS.map((f) => player[f]).filter(
+    (v): v is number => v != null,
+  );
+  if (rated.length === 0) return null;
+  return rated.reduce((a, b) => a + b, 0) / rated.length;
+}
+
 // ---------- Teams ----------
 //
 // Color is stored as a token string; the UI maps it to concrete classes.

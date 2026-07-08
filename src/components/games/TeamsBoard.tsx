@@ -10,10 +10,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { gameParticipantsService, teamsService } from "@/services/gamesService";
+import { computeAutoSplit } from "@/lib/teams";
 import { cn } from "@/lib/utils";
 import {
   nextTeamColor,
   nextTeamName,
+  playerSkillTotal,
   type GameTeam,
   type ParticipantWithPlayer,
 } from "@/types/domain";
@@ -39,9 +41,6 @@ const TEAM_COLOR: Record<string, { dot: string; accent: string }> = {
 function colorOf(color: string) {
   return TEAM_COLOR[color] ?? TEAM_COLOR.blue;
 }
-
-/** Statuses that shouldn't be auto-distributed into teams. */
-const NON_PLAYING: ReadonlySet<string> = new Set(["cancelled", "absent"]);
 
 export function TeamsBoard({
   gameId,
@@ -97,24 +96,11 @@ export function TeamsBoard({
 
   function shuffle() {
     if (teams.length < 2) return;
-    const pool = participants.filter((p) => !NON_PLAYING.has(p.status));
-    // Fisher–Yates.
-    const shuffled = [...pool];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    const assignments: { participantId: string; teamId: string | null }[] =
-      shuffled.map((p, i) => ({
-        participantId: p.id,
-        teamId: teams[i % teams.length].id,
-      }));
-    // Anyone excluded (cancelled/absent) goes to the bench.
-    for (const p of participants) {
-      if (NON_PLAYING.has(p.status) && p.team_id) {
-        assignments.push({ participantId: p.id, teamId: null });
-      }
-    }
+    const assignments = computeAutoSplit(
+      participants,
+      teams.map((t) => t.id),
+    );
+    if (assignments.length === 0) return;
     void run(() => gameParticipantsService.assignTeamMany(assignments));
   }
 
@@ -133,11 +119,12 @@ export function TeamsBoard({
           <Button
             size="sm"
             variant="secondary"
+            title="Разбить по силе игроков (или случайно, если навыки не заданы)"
             startContent={<Shuffle className="size-4" />}
             isDisabled={!canShuffle}
             onPress={shuffle}
           >
-            Перемешать
+            Разбить
           </Button>
           <Button
             size="sm"
@@ -217,6 +204,10 @@ function TeamColumn({
   onRemove,
 }: TeamColumnProps) {
   const c = colorOf(team.color);
+  const skillTotal = members.reduce(
+    (acc, m) => acc + playerSkillTotal(m.player),
+    0,
+  );
   return (
     <div
       className={cn(
@@ -230,6 +221,14 @@ function TeamColumn({
           <span className={cn("size-2.5 shrink-0 rounded-full", c.dot)} />
           <span className="truncate text-sm font-semibold">{team.name}</span>
           <span className="text-xs text-muted">{members.length}</span>
+          {skillTotal > 0 && (
+            <span
+              className="rounded bg-surface-secondary px-1.5 py-0.5 text-[11px] font-medium text-muted"
+              title="Суммарная сила команды"
+            >
+              Σ{skillTotal}
+            </span>
+          )}
         </div>
         <Button
           isIconOnly
@@ -321,7 +320,7 @@ function MemberRow({
   return (
     <div className="flex items-center justify-between gap-1 rounded-md border border-border bg-background px-2 py-1.5">
       <span className="truncate text-sm">{member.player.full_name}</span>
-      <DropdownMenu>
+      <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           <Button
             isIconOnly
@@ -329,6 +328,7 @@ function MemberRow({
             variant="ghost"
             aria-label="Переместить игрока"
             isDisabled={busy}
+            className="touch-manipulation"
           >
             <ArrowLeftRight className="size-4" />
           </Button>
