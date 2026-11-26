@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ArrowRight, Pencil, Trash2 } from "lucide-react";
 import { Button, Table } from "@/components/ui/hero";
 
 import { PageHeader } from "@/components/common/PageHeader";
@@ -183,27 +184,33 @@ export default function GamesPage() {
                       <GameStatusChip status={g.status} />
                     </Table.Cell>
                     <Table.Cell>
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-end gap-1">
                         <Button
-                          size="sm"
-                          variant="primary"
+                          isIconOnly
+                          variant="ghost"
+                          aria-label="Открыть"
+                          title="Открыть"
                           onPress={() => navigate(`/games/${g.id}`)}
                         >
-                          Открыть
+                          <ArrowRight />
                         </Button>
                         <Button
-                          size="sm"
-                          variant="secondary"
+                          isIconOnly
+                          variant="ghost"
+                          aria-label="Изменить"
+                          title="Изменить"
                           onPress={() => openEdit(g)}
                         >
-                          Изменить
+                          <Pencil />
                         </Button>
                         <Button
-                          size="sm"
-                          variant="danger"
+                          isIconOnly
+                          variant="danger-soft"
+                          aria-label="Удалить"
+                          title="Удалить"
                           onPress={() => setConfirmTarget(g)}
                         >
-                          Удалить
+                          <Trash2 />
                         </Button>
                       </div>
                     </Table.Cell>

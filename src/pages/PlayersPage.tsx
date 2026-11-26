@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Star } from "lucide-react";
+import { Pencil, Star, UserCheck, UserMinus } from "lucide-react";
 import { Button, Chip, Input, Link as HeroLink, Table } from "@/components/ui/hero";
 
 import { PageHeader } from "@/components/common/PageHeader";
@@ -171,20 +171,28 @@ export default function PlayersPage() {
                       )}
                     </Table.Cell>
                     <Table.Cell>
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-end gap-1">
                         <Button
-                          size="sm"
-                          variant="secondary"
+                          isIconOnly
+                          variant="ghost"
+                          aria-label="Изменить"
+                          title="Изменить"
                           onPress={() => openEdit(player)}
                         >
-                          Изменить
+                          <Pencil />
                         </Button>
                         <Button
-                          size="sm"
-                          variant={player.is_active ? "outline" : "secondary"}
+                          isIconOnly
+                          variant="ghost"
+                          aria-label={
+                            player.is_active ? "Деактивировать" : "Активировать"
+                          }
+                          title={
+                            player.is_active ? "Деактивировать" : "Активировать"
+                          }
                           onPress={() => setConfirmTarget(player)}
                         >
-                          {player.is_active ? "Деактивировать" : "Активировать"}
+                          {player.is_active ? <UserMinus /> : <UserCheck />}
                         </Button>
                       </div>
                     </Table.Cell>

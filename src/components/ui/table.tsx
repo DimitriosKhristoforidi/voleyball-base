@@ -57,7 +57,7 @@ function Column({ className, isRowHeader: _isRowHeader, ...props }: ColumnProps)
     <th
       scope="col"
       className={cn(
-        "h-11 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted whitespace-nowrap first:pl-4 last:pr-4",
+        "h-9 px-3 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted whitespace-nowrap first:pl-4 last:pr-4",
         className,
       )}
       {...props}
@@ -85,7 +85,7 @@ function Cell({ className, ...props }: TdHTMLAttributes<HTMLTableCellElement>) {
   return (
     <td
       className={cn(
-        "px-3 py-2.5 align-middle first:pl-4 last:pr-4",
+        "px-3 py-1.5 align-middle first:pl-4 last:pr-4",
         className,
       )}
       {...props}

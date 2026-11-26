@@ -160,11 +160,13 @@ export default function DashboardPage() {
                           <Table.Cell>
                             <div className="flex justify-end">
                               <Button
-                                size="sm"
-                                variant="primary"
+                                isIconOnly
+                                variant="ghost"
+                                aria-label="Открыть"
+                                title="Открыть"
                                 onPress={() => navigate(`/games/${g.id}`)}
                               >
-                                Открыть
+                                <ArrowRight />
                               </Button>
                             </div>
                           </Table.Cell>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { MapPin, Pencil, Trash2 } from "lucide-react";
 import { Button, Link as HeroLink, Table } from "@/components/ui/hero";
 
 import { PageHeader } from "@/components/common/PageHeader";
@@ -140,29 +141,35 @@ export default function VenuesPage() {
                           href={v.map_url}
                           target="_blank"
                           rel="noreferrer noopener"
+                          aria-label="Открыть карту"
+                          title="Открыть карту"
+                          className="inline-flex size-9 items-center justify-center rounded-lg no-underline hover:bg-surface-secondary hover:no-underline"
                         >
-                          Открыть карту
-                          <HeroLink.Icon />
+                          <MapPin aria-hidden className="size-4" />
                         </HeroLink>
                       ) : (
                         "-"
                       )}
                     </Table.Cell>
                     <Table.Cell>
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-end gap-1">
                         <Button
-                          size="sm"
-                          variant="secondary"
+                          isIconOnly
+                          variant="ghost"
+                          aria-label="Изменить"
+                          title="Изменить"
                           onPress={() => openEdit(v)}
                         >
-                          Изменить
+                          <Pencil />
                         </Button>
                         <Button
-                          size="sm"
-                          variant="danger"
+                          isIconOnly
+                          variant="danger-soft"
+                          aria-label="Удалить"
+                          title="Удалить"
                           onPress={() => setConfirmTarget(v)}
                         >
-                          Удалить
+                          <Trash2 />
                         </Button>
                       </div>
                     </Table.Cell>

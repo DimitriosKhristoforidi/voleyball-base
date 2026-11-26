@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ChevronDown, QrCode, RotateCcw, Send } from "lucide-react";
+import { ChevronDown, QrCode, RefreshCw, RotateCcw, Send, UserMinus } from "lucide-react";
 import {
   Button,
   Card,
@@ -740,8 +740,14 @@ export default function GameDetailPage() {
                         {rowError && (
                           <div className="mt-1 flex items-center gap-2 text-xs text-danger">
                             <span>{rowError.message}</span>
-                            <Button size="sm" variant="ghost" onPress={rowError.retry}>
-                              Повторить
+                            <Button
+                              isIconOnly
+                              variant="ghost"
+                              aria-label="Повторить"
+                              title="Повторить"
+                              onPress={rowError.retry}
+                            >
+                              <RefreshCw />
                             </Button>
                           </div>
                         )}
@@ -781,14 +787,14 @@ export default function GameDetailPage() {
                           />
                           {breakdown.game_duration_minutes != null && (
                             <Button
-                              size="sm"
+                              isIconOnly
                               variant="ghost"
-                              className="size-11"
                               isDisabled={pending}
                               onPress={() => handlePlayedResetToFull(p)}
                               aria-label="Полное время игры"
+                              title="Полное время игры"
                             >
-                              <RotateCcw className="size-4" />
+                              <RotateCcw />
                             </Button>
                           )}
                         </div>
@@ -856,13 +862,14 @@ export default function GameDetailPage() {
                       <Table.Cell>
                         <div className="flex justify-end">
                           <Button
-                            size="sm"
+                            isIconOnly
                             variant="danger-soft"
-                            className="min-h-11"
                             isDisabled={pending}
+                            aria-label="Убрать"
+                            title="Убрать"
                             onPress={() => setRemoveTarget(p)}
                           >
-                            Убрать
+                            <UserMinus />
                           </Button>
                         </div>
                       </Table.Cell>
