@@ -10,8 +10,8 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { gameParticipantsService, teamsService } from "@/services/gamesService";
-import { telegramService } from "@/services/telegramService";
 import { computeAutoSplit } from "@/lib/teams";
 import { cn } from "@/lib/utils";
 import {
@@ -27,6 +27,9 @@ interface TeamsBoardProps {
   teams: GameTeam[];
   participants: ParticipantWithPlayer[];
   onChanged: () => Promise<void> | void;
+  /** Opens the group-message preview. Sending stays with the parent. */
+  onSendTeams?: () => void;
+  teamsSending?: boolean;
 }
 
 const TEAM_COLOR: Record<string, { dot: string; accent: string }> = {
@@ -49,11 +52,13 @@ export function TeamsBoard({
   teams,
   participants,
   onChanged,
+  onSendTeams,
+  teamsSending = false,
 }: TeamsBoardProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sending, setSending] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [shuffleAsk, setShuffleAsk] = useState(false);
+  const [teamToRemove, setTeamToRemove] = useState<GameTeam | null>(null);
 
   const membersByTeam = useMemo(() => {
     const map = new Map<string, ParticipantWithPlayer[]>();
@@ -113,20 +118,8 @@ export function TeamsBoard({
     0,
   );
   const canShuffle = teams.length >= 2 && participants.length > 0 && !busy;
-  const canSendTeams = assignedCount > 0 && !busy && !sending;
-
-  function sendTeams() {
-    setSending(true);
-    setError(null);
-    setNotice(null);
-    telegramService
-      .sendGameTeams(gameId)
-      .then(() => setNotice("Составы отправлены в Telegram"))
-      .catch((err) =>
-        setError(err instanceof Error ? err.message : "Не удалось отправить"),
-      )
-      .finally(() => setSending(false));
-  }
+  const canSendTeams =
+    assignedCount > 0 && !busy && !teamsSending && onSendTeams != null;
 
   return (
     <section className="mb-4">
@@ -141,11 +134,12 @@ export function TeamsBoard({
           <Button
             size="sm"
             variant="secondary"
+            className="hidden min-h-11 lg:inline-flex"
             title="Отправить составы команд в Telegram-группу"
             startContent={<Send className="size-4" />}
             isDisabled={!canSendTeams}
-            isPending={sending}
-            onPress={sendTeams}
+            isPending={teamsSending}
+            onPress={onSendTeams}
           >
             В Telegram
           </Button>
@@ -155,14 +149,16 @@ export function TeamsBoard({
             title="Разбить по силе игроков (или случайно, если навыки не заданы)"
             startContent={<Shuffle className="size-4" />}
             isDisabled={!canShuffle}
-            onPress={shuffle}
+            className="min-h-11"
+            onPress={() => setShuffleAsk(true)}
           >
             Разбить
           </Button>
           <Button
             size="sm"
-            variant="primary"
+            variant="secondary"
             startContent={<Plus className="size-4" />}
+            className="min-h-11"
             isDisabled={busy}
             onPress={addTeam}
           >
@@ -174,12 +170,6 @@ export function TeamsBoard({
       {error && (
         <div className="mb-2 rounded-md bg-danger-soft px-3 py-2 text-sm text-danger-soft-foreground">
           {error}
-        </div>
-      )}
-
-      {notice && (
-        <div className="mb-2 rounded-md bg-success-soft px-3 py-2 text-sm text-success-soft-foreground">
-          {notice}
         </div>
       )}
 
@@ -210,7 +200,7 @@ export function TeamsBoard({
               teams={teams}
               busy={busy}
               onMove={move}
-              onRemove={() => removeTeam(team.id)}
+              onRemove={() => setTeamToRemove(team)}
             />
           ))}
           <BenchColumn
@@ -221,6 +211,30 @@ export function TeamsBoard({
           />
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={shuffleAsk}
+        title="Разбить игроков по командам?"
+        description="Текущий состав команд будет заменён. Игроков без навыков распределит случайно."
+        confirmLabel="Разбить"
+        onConfirm={shuffle}
+        onClose={() => setShuffleAsk(false)}
+      />
+      <ConfirmDialog
+        isOpen={teamToRemove != null}
+        title={
+          teamToRemove
+            ? `Убрать ${teamToRemove.name}?`
+            : "Убрать команду?"
+        }
+        description="Игроки этой команды останутся в игре и перейдут на скамейку."
+        destructive
+        confirmLabel="Убрать"
+        onConfirm={() => {
+          if (teamToRemove) removeTeam(teamToRemove.id);
+        }}
+        onClose={() => setTeamToRemove(null)}
+      />
     </section>
   );
 }
@@ -265,7 +279,7 @@ function TeamColumn({
               className="rounded bg-surface-secondary px-1.5 py-0.5 text-[11px] font-medium text-muted"
               title="Суммарная сила команды"
             >
-              Σ{skillTotal}
+              сила {skillTotal}
             </span>
           )}
         </div>
@@ -273,7 +287,8 @@ function TeamColumn({
           isIconOnly
           size="sm"
           variant="ghost"
-          aria-label={`Удалить ${team.name}`}
+          className="size-11"
+          aria-label={`Убрать ${team.name}`}
           isDisabled={busy}
           onPress={onRemove}
         >
@@ -283,7 +298,7 @@ function TeamColumn({
       <div className="flex min-h-16 flex-col gap-1 p-2 pl-3">
         {members.length === 0 ? (
           <p className="px-1 py-3 text-center text-xs text-muted">
-            Нет игроков. Выберите команду в списке рядом с игроком.
+            Нет игроков. Нажмите стрелки у игрока на скамейке.
           </p>
         ) : (
           members.map((m) => (
@@ -424,6 +439,11 @@ function MoveMenu({
 
   useEffect(() => {
     if (!open) return;
+    const focusId = window.requestAnimationFrame(() => {
+      menuRef.current
+        ?.querySelector<HTMLButtonElement>("[role='menuitem']")
+        ?.focus();
+    });
     function onPointerDown(e: PointerEvent) {
       const target = e.target as Node;
       if (menuRef.current?.contains(target)) return;
@@ -438,6 +458,7 @@ function MoveMenu({
     window.addEventListener("resize", reposition);
     window.addEventListener("scroll", reposition, true);
     return () => {
+      window.cancelAnimationFrame(focusId);
       document.removeEventListener("pointerdown", onPointerDown, true);
       document.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("resize", reposition);
@@ -457,7 +478,7 @@ function MoveMenu({
         isIconOnly
         size="sm"
         variant="ghost"
-        className="touch-manipulation"
+        className="size-11 touch-manipulation"
         aria-label={`Переместить: ${label}`}
         aria-haspopup="menu"
         aria-expanded={open}
@@ -514,7 +535,7 @@ function MenuButton({
       type="button"
       role="menuitem"
       onClick={onSelect}
-      className="flex w-full cursor-pointer select-none items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm outline-none transition-colors hover:bg-accent-soft hover:text-accent-soft-foreground [&_svg]:size-4 [&_svg]:shrink-0"
+      className="flex min-h-11 w-full cursor-pointer select-none items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm outline-none transition-colors hover:bg-accent-soft hover:text-accent-soft-foreground focus-visible:bg-accent-soft focus-visible:text-accent-soft-foreground [&_svg]:size-4 [&_svg]:shrink-0"
     >
       {children}
     </button>

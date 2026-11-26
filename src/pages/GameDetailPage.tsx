@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ChevronDown, QrCode } from "lucide-react";
+import { ChevronDown, QrCode, RotateCcw, Send } from "lucide-react";
 import {
   Button,
   Card,
@@ -29,12 +29,16 @@ import { AppCheckbox } from "@/components/ui/AppCheckbox";
 import { AppSelect } from "@/components/ui/AppSelect";
 import { AddParticipantsModal } from "@/components/games/AddParticipantsModal";
 import { TeamsBoard } from "@/components/games/TeamsBoard";
-import { TelegramMessageModal } from "@/components/games/TelegramMessageModal";
+import { TelegramPreviewModal } from "@/components/games/TelegramPreviewModal";
 import { gameParticipantsService, gamesService } from "@/services/gamesService";
 import { playersService } from "@/services/playersService";
 import { telegramService } from "@/services/telegramService";
 import { formatDateRu, formatMinutesRu, formatTimeRange } from "@/lib/date";
 import { getPublicGameUrl } from "@/lib/publicGameUrl";
+import {
+  buildReminderPreview,
+  buildTeamsPreview,
+} from "@/lib/telegramPreview";
 import {
   calculateParticipantPayments,
   defaultBillableForStatus,
@@ -76,18 +80,35 @@ export default function GameDetailPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [addOpen, setAddOpen] = useState(false);
-  const [telegramOpen, setTelegramOpen] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [reminderSending, setReminderSending] = useState<
     "text" | "image" | null
   >(null);
   const [removeTarget, setRemoveTarget] =
     useState<ParticipantWithPlayer | null>(null);
+  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
+  const [rowErrors, setRowErrors] = useState<
+    Record<string, { message: string; retry: () => void }>
+  >({});
+  const [billableNotes, setBillableNotes] = useState<Record<string, string>>(
+    {},
+  );
+  const [preview, setPreview] = useState<null | {
+    title: string;
+    text: string;
+    run: () => Promise<void>;
+  }>(null);
+  const [teamsNotice, setTeamsNotice] = useState<string | null>(null);
+  const [teamsSending, setTeamsSending] = useState(false);
+  const loadedId = useRef<string | null>(null);
 
   const refresh = useCallback(async () => {
     if (!id) return;
-    setLoading(true);
-    setError(null);
+    const first = loadedId.current !== id;
+    if (first) {
+      setLoading(true);
+      setError(null);
+    }
     try {
       const [detail, players] = await Promise.all([
         gamesService.getDetail(id),
@@ -98,12 +119,13 @@ export default function GameDetailPage() {
         setGame(null);
       } else {
         setGame(detail);
+        loadedId.current = id;
       }
       setActivePlayers(players);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка загрузки");
     } finally {
-      setLoading(false);
+      if (first) setLoading(false);
     }
   }, [id]);
 
@@ -133,6 +155,13 @@ export default function GameDetailPage() {
     payload: GameParticipantUpdate,
     optimistic?: Partial<ParticipantWithPlayer>,
   ) {
+    setPendingIds((current) => new Set(current).add(pid));
+    setRowErrors((current) => {
+      if (!current[pid]) return current;
+      const next = { ...current };
+      delete next[pid];
+      return next;
+    });
     if (optimistic && game) {
       setGame({
         ...game,
@@ -143,18 +172,41 @@ export default function GameDetailPage() {
     }
     try {
       await gameParticipantsService.update(pid, payload);
+      await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ошибка обновления");
+      const message = err instanceof Error ? err.message : "Ошибка обновления";
+      setRowErrors((current) => ({
+        ...current,
+        [pid]: {
+          message,
+          retry: () => {
+            void patchParticipant(pid, payload, optimistic);
+          },
+        },
+      }));
+      await refresh();
+    } finally {
+      setPendingIds((current) => {
+        const next = new Set(current);
+        next.delete(pid);
+        return next;
+      });
     }
-    await refresh();
   }
 
   function handleStatusChange(
     p: ParticipantWithPlayer,
     status: ParticipantStatus,
   ) {
-    // Status change also adjusts is_billable based on sensible defaults.
     const is_billable = defaultBillableForStatus(status);
+    if (is_billable !== p.is_billable) {
+      setBillableNotes((current) => ({
+        ...current,
+        [p.id]: is_billable
+          ? "Теперь учитывается в оплате"
+          : "Теперь не учитывается",
+      }));
+    }
     void patchParticipant(
       p.id,
       { status, is_billable },
@@ -265,6 +317,7 @@ export default function GameDetailPage() {
     setError(null);
     try {
       await telegramService.sendGameReminder(game.id, withImage);
+      setPreview(null);
       await refresh();
     } catch (err) {
       setError(
@@ -273,6 +326,42 @@ export default function GameDetailPage() {
     } finally {
       setReminderSending(null);
     }
+  }
+
+  async function handleSendTeams() {
+    if (!game) return;
+    setTeamsSending(true);
+    setError(null);
+    setTeamsNotice(null);
+    try {
+      await telegramService.sendGameTeams(game.id);
+      setPreview(null);
+      setTeamsNotice("Составы отправлены в Telegram");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Не удалось отправить составы",
+      );
+    } finally {
+      setTeamsSending(false);
+    }
+  }
+
+  function openReminderPreview(withImage: boolean) {
+    if (!game) return;
+    setPreview({
+      title: withImage ? "Напоминание с QR" : "Напоминание без QR",
+      text: buildReminderPreview(game, withImage),
+      run: () => handleSendTelegramReminder(withImage),
+    });
+  }
+
+  function openTeamsPreview() {
+    if (!game) return;
+    setPreview({
+      title: "Составы команд",
+      text: buildTeamsPreview(game),
+      run: handleSendTeams,
+    });
   }
 
   if (loading) return <LoadingState />;
@@ -288,8 +377,13 @@ export default function GameDetailPage() {
     );
   }
 
+  const canSendTeams = game.participants.some(
+    (p) => p.team_id != null && game.teams.some((t) => t.id === p.team_id),
+  );
+  const due = breakdown.remaining;
+
   return (
-    <div>
+    <div className="pb-24 lg:pb-0">
       <PageHeader
         title={game.title?.trim() || "Игра"}
         description={`${formatDateRu(game.game_date)} · ${formatTimeRange(
@@ -312,19 +406,17 @@ export default function GameDetailPage() {
                   setLinkCopied(true);
                   window.setTimeout(() => setLinkCopied(false), 1500);
                 } catch {
-                  // ignore
+                  setError("Не удалось скопировать ссылку");
                 }
               }}
             >
-              {linkCopied ? "Ссылка скопирована ✓" : "Ссылка для игроков"}
+              {linkCopied ? "Ссылка скопирована" : "Ссылка для игроков"}
             </Button>
-            {/* <Button variant="secondary" onPress={() => setTelegramOpen(true)}>
-              Сообщение в Telegram
-            </Button> */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="secondary"
+                  className="hidden min-h-11 lg:inline-flex"
                   isPending={reminderSending !== null}
                   isDisabled={game.status === "cancelled"}
                 >
@@ -333,19 +425,19 @@ export default function GameDetailPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onSelect={() => handleSendTelegramReminder(false)}
-                >
+                <DropdownMenuItem onSelect={() => openReminderPreview(false)}>
                   Без QR
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={() => handleSendTelegramReminder(true)}
-                >
+                <DropdownMenuItem onSelect={() => openReminderPreview(true)}>
                   <QrCode />С QR
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button variant="primary" onPress={() => setAddOpen(true)}>
+            <Button
+              variant="primary"
+              className="hidden min-h-11 lg:inline-flex"
+              onPress={() => setAddOpen(true)}
+            >
               Добавить участников
             </Button>
           </>
@@ -353,8 +445,26 @@ export default function GameDetailPage() {
       />
 
       {error && (
-        <div className="mb-3 rounded-md bg-danger-soft px-3 py-2 text-sm text-danger-soft-foreground">
+        <div
+          role="alert"
+          className="mb-3 rounded-md bg-danger-soft px-3 py-2 text-sm text-danger-soft-foreground"
+        >
           {error}
+        </div>
+      )}
+
+      {teamsNotice && (
+        <div
+          role="status"
+          className="mb-3 rounded-md bg-success-soft px-3 py-2 text-sm text-success-soft-foreground"
+        >
+          {teamsNotice}
+        </div>
+      )}
+
+      {game.status === "cancelled" && (
+        <div className="mb-4 rounded-md border border-danger bg-danger-soft px-3 py-2 text-sm text-danger-soft-foreground">
+          Игра отменена.
         </div>
       )}
 
@@ -369,9 +479,7 @@ export default function GameDetailPage() {
       <div className="mb-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
         <Card>
           <Card.Content>
-            <div className="text-xs font-semibold uppercase tracking-wide text-muted">
-              Об игре
-            </div>
+            <div className="text-sm font-semibold">Об игре</div>
             <dl className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
               <DetailRow label="Статус">
                 <GameStatusChip status={game.status} />
@@ -407,9 +515,20 @@ export default function GameDetailPage() {
 
         <Card>
           <Card.Content>
-            <div className="text-xs font-semibold uppercase tracking-wide text-muted">
-              Финансы
-            </div>
+            <div className="text-sm font-semibold">Финансы</div>
+            {due != null && due > 0 && (
+              <div className="mt-1">
+                <div className="text-3xl font-semibold tabular-nums tracking-tight text-warning">
+                  {formatAmount(due)} {currency}
+                </div>
+                <div className="text-sm text-muted">Осталось собрать</div>
+              </div>
+            )}
+            {due === 0 && (
+              <div className="mt-1 text-sm font-medium text-success">
+                Всё собрано
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
               <StatItem
                 label="Общая стоимость"
@@ -433,19 +552,16 @@ export default function GameDetailPage() {
                 value={`${formatAmount(breakdown.collected)} ${currency}`}
                 tone="success"
               />
-              <StatItem
-                label="Осталось собрать"
-                value={
-                  breakdown.remaining != null
-                    ? `${formatAmount(breakdown.remaining)} ${currency}`
-                    : "-"
-                }
-                tone={
-                  breakdown.remaining != null && breakdown.remaining > 0
-                    ? "warning"
-                    : "default"
-                }
-              />
+              {!(due != null && due > 0) && (
+                <StatItem
+                  label="Осталось собрать"
+                  value={
+                    breakdown.remaining != null
+                      ? `${formatAmount(breakdown.remaining)} ${currency}`
+                      : "-"
+                  }
+                />
+              )}
               <StatItem label="Оплатили" value={breakdown.paid_count} />
               <StatItem
                 label="Не оплатили"
@@ -462,13 +578,9 @@ export default function GameDetailPage() {
         teams={game.teams}
         participants={game.participants}
         onChanged={refresh}
+        onSendTeams={openTeamsPreview}
+        teamsSending={teamsSending}
       />
-
-      {game.status === "cancelled" && (
-        <div className="mb-4 rounded-md border border-danger bg-danger-soft px-3 py-2 text-sm text-danger-soft-foreground">
-          Игра отменена.
-        </div>
-      )}
 
       {game.participants.length === 0 ? (
         <EmptyState
@@ -482,34 +594,159 @@ export default function GameDetailPage() {
           }
         />
       ) : (
-        <Table>
+        <>
+        <div className="flex flex-col gap-3 lg:hidden">
+          {game.participants.map((p) => {
+            const calc = paymentsByParticipantId.get(p.id);
+            const pending = pendingIds.has(p.id);
+            const rowError = rowErrors[p.id];
+            const owed =
+              calc?.is_billable && calc.owed_amount > 0
+                ? `${formatAmount(calc.owed_amount)} ${currency}`
+                : "—";
+            return (
+              <article
+                key={p.id}
+                aria-busy={pending}
+                className={`rounded-xl border border-border bg-surface p-3 ${pending ? "opacity-60" : ""}`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="truncate font-medium">{p.player.full_name}</div>
+                    <div className="text-sm text-muted">{teamLabel(game, p)}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-semibold tabular-nums">{owed}</div>
+                    <div className="text-xs text-muted">должен</div>
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <AppSelect<ParticipantStatus>
+                    ariaLabel="Статус"
+                    value={p.status}
+                    onChange={(v) => v && handleStatusChange(p, v)}
+                    options={STATUS_OPTIONS}
+                    variant="secondary"
+                    isDisabled={pending}
+                    renderValue={(v) =>
+                      v ? <ParticipantStatusChip status={v} /> : null
+                    }
+                  />
+                </div>
+                {billableNotes[p.id] && (
+                  <p className="mt-1 text-sm text-muted">{billableNotes[p.id]}</p>
+                )}
+                <div className="mt-2 flex min-h-11 items-center justify-between gap-3">
+                  <span className="text-sm">Оплатил</span>
+                  <AppCheckbox
+                    touch
+                    isSelected={p.has_paid}
+                    isDisabled={pending}
+                    onChange={(v) => handlePaidToggle(p, v)}
+                    ariaLabel="Оплатил"
+                  />
+                </div>
+                {rowError && (
+                  <div className="mt-2 flex items-center justify-between gap-2 text-sm text-danger">
+                    <span>{rowError.message}</span>
+                    <Button size="sm" variant="secondary" className="min-h-11" onPress={rowError.retry}>
+                      Повторить
+                    </Button>
+                  </div>
+                )}
+                <details className="mt-1">
+                  <summary className="flex min-h-11 cursor-pointer items-center text-sm text-muted">
+                    Часы, способ, убрать
+                  </summary>
+                  <div className="flex flex-col gap-3 pb-1">
+                    <label className="flex items-center justify-between gap-3 text-sm">
+                      Сыграл, часы
+                      <CommitField
+                        value={minutesToHoursString(p.played_minutes)}
+                        ariaLabel="Сыграл часов"
+                        className="w-24"
+                        step="0.25"
+                        min="0"
+                        disabled={pending}
+                        onCommit={(raw) => handlePlayedHoursBlur(p, raw)}
+                      />
+                    </label>
+                    <div className="flex min-h-11 items-center justify-between">
+                      <span className="text-sm">Учитывать в оплате</span>
+                      <AppCheckbox
+                        touch
+                        isSelected={p.is_billable}
+                        isDisabled={pending}
+                        onChange={(v) => handleBillableToggle(p, v)}
+                        ariaLabel="Учитывать в оплате"
+                      />
+                    </div>
+                    <AppSelect<PaymentMethod>
+                      ariaLabel="Способ оплаты"
+                      value={p.payment_method}
+                      onChange={(v) => handlePaymentMethodChange(p, v)}
+                      options={PAYMENT_OPTIONS}
+                      isDisabled={!p.has_paid || pending}
+                      variant="secondary"
+                      placeholder="Способ оплаты"
+                    />
+                    <Button
+                      variant="danger-soft"
+                      className="min-h-11"
+                      isDisabled={pending}
+                      onPress={() => setRemoveTarget(p)}
+                    >
+                      Убрать
+                    </Button>
+                  </div>
+                </details>
+              </article>
+            );
+          })}
+        </div>
+        <Table className="hidden lg:block">
           <Table.ScrollContainer>
             <Table.Content aria-label="Участники" className="min-w-[1400px]">
               <Table.Header>
-                <Table.Column isRowHeader>Игрок</Table.Column>
-                <Table.Column>Позиции</Table.Column>
-                <Table.Column>Статус</Table.Column>
-                <Table.Column>Сыграл (ч)</Table.Column>
-                <Table.Column>Учитывать</Table.Column>
-                <Table.Column>Должен</Table.Column>
-                <Table.Column>Оплатил</Table.Column>
-                <Table.Column>Сумма</Table.Column>
-                <Table.Column>Способ</Table.Column>
-                <Table.Column>Остаток</Table.Column>
-                <Table.Column>Оплата</Table.Column>
-                <Table.Column>Действия</Table.Column>
+                <Table.Column isRowHeader className="sticky left-0 z-20 bg-card normal-case tracking-normal">Игрок</Table.Column>
+                <Table.Column className="normal-case tracking-normal">Команда</Table.Column>
+                <Table.Column className="normal-case tracking-normal">Позиции</Table.Column>
+                <Table.Column className="normal-case tracking-normal">Статус</Table.Column>
+                <Table.Column className="normal-case tracking-normal">Сыграл, ч</Table.Column>
+                <Table.Column className="normal-case tracking-normal">Учитывать</Table.Column>
+                <Table.Column className="normal-case tracking-normal">Должен</Table.Column>
+                <Table.Column className="normal-case tracking-normal">Оплатил</Table.Column>
+                <Table.Column className="normal-case tracking-normal">Сумма</Table.Column>
+                <Table.Column className="normal-case tracking-normal">Способ</Table.Column>
+                <Table.Column className="normal-case tracking-normal">Остаток</Table.Column>
+                <Table.Column className="normal-case tracking-normal">Оплата</Table.Column>
+                <Table.Column className="normal-case tracking-normal">Действия</Table.Column>
               </Table.Header>
               <Table.Body>
                 {game.participants.map((p) => {
                   const calc = paymentsByParticipantId.get(p.id);
+                  const pending = pendingIds.has(p.id);
+                  const rowError = rowErrors[p.id];
                   return (
-                    <Table.Row key={p.id}>
-                      <Table.Cell>
+                    <Table.Row key={p.id} aria-busy={pending} className={`group ${pending ? "opacity-60" : ""}`}>
+                      <Table.Cell className="sticky left-0 z-10 bg-card group-hover:bg-surface-secondary">
                         <div className="font-medium">{p.player.full_name}</div>
                         <div className="text-xs text-muted">
                           <TelegramInline player={p.player} />
                         </div>
+                        {billableNotes[p.id] && (
+                          <div className="mt-1 text-xs text-muted">{billableNotes[p.id]}</div>
+                        )}
+                        {rowError && (
+                          <div className="mt-1 flex items-center gap-2 text-xs text-danger">
+                            <span>{rowError.message}</span>
+                            <Button size="sm" variant="ghost" onPress={rowError.retry}>
+                              Повторить
+                            </Button>
+                          </div>
+                        )}
                       </Table.Cell>
+                      <Table.Cell>{teamLabel(game, p)}</Table.Cell>
                       <Table.Cell>
                         <PositionChips
                           collapsed
@@ -524,6 +761,7 @@ export default function GameDetailPage() {
                             onChange={(v) => v && handleStatusChange(p, v)}
                             options={STATUS_OPTIONS}
                             variant="secondary"
+                            isDisabled={pending}
                             renderValue={(v) =>
                               v ? <ParticipantStatusChip status={v} /> : null
                             }
@@ -532,41 +770,39 @@ export default function GameDetailPage() {
                       </Table.Cell>
                       <Table.Cell>
                         <div className="flex items-center gap-1">
-                          <Input
-                            type="number"
-                            inputMode="decimal"
-                            aria-label="Сыграл часов"
-                            className="w-20"
-                            variant="secondary"
+                          <CommitField
+                            value={minutesToHoursString(p.played_minutes)}
+                            ariaLabel="Сыграл часов"
+                            className="w-24"
                             step="0.25"
                             min="0"
-                            defaultValue={minutesToHoursString(
-                              p.played_minutes,
-                            )}
-                            onBlur={(e) =>
-                              handlePlayedHoursBlur(p, e.currentTarget.value)
-                            }
+                            disabled={pending}
+                            onCommit={(raw) => handlePlayedHoursBlur(p, raw)}
                           />
                           {breakdown.game_duration_minutes != null && (
                             <Button
                               size="sm"
                               variant="ghost"
+                              className="size-11"
+                              isDisabled={pending}
                               onPress={() => handlePlayedResetToFull(p)}
                               aria-label="Полное время игры"
                             >
-                              ↻
+                              <RotateCcw className="size-4" />
                             </Button>
                           )}
                         </div>
                         {calc && calc.played_minutes_raw == null && (
-                          <div className="mt-1 text-[10px] text-muted">
+                          <div className="mt-1 text-xs text-muted">
                             по умолчанию {formatMinutesRu(calc.played_minutes)}
                           </div>
                         )}
                       </Table.Cell>
                       <Table.Cell>
                         <AppCheckbox
+                          touch
                           isSelected={p.is_billable}
+                          isDisabled={pending}
                           onChange={(v) => handleBillableToggle(p, v)}
                           ariaLabel="Учитывать в оплате"
                         />
@@ -578,25 +814,20 @@ export default function GameDetailPage() {
                       </Table.Cell>
                       <Table.Cell>
                         <AppCheckbox
+                          touch
                           isSelected={p.has_paid}
+                          isDisabled={pending}
                           onChange={(v) => handlePaidToggle(p, v)}
                           ariaLabel="Оплатил"
                         />
                       </Table.Cell>
                       <Table.Cell>
-                        <Input
-                          type="number"
-                          inputMode="decimal"
-                          aria-label="Сумма"
+                        <CommitField
+                          value={p.paid_amount != null ? String(p.paid_amount) : ""}
+                          ariaLabel="Сумма"
                           className="w-24"
-                          variant="secondary"
-                          defaultValue={
-                            p.paid_amount != null ? String(p.paid_amount) : ""
-                          }
-                          onBlur={(e) =>
-                            handlePaidAmountBlur(p, e.currentTarget.value)
-                          }
-                          disabled={!p.has_paid}
+                          disabled={!p.has_paid || pending}
+                          onCommit={(raw) => handlePaidAmountBlur(p, raw)}
                         />
                       </Table.Cell>
                       <Table.Cell>
@@ -606,7 +837,7 @@ export default function GameDetailPage() {
                             value={p.payment_method}
                             onChange={(v) => handlePaymentMethodChange(p, v)}
                             options={PAYMENT_OPTIONS}
-                            isDisabled={!p.has_paid}
+                            isDisabled={!p.has_paid || pending}
                             variant="secondary"
                             placeholder="-"
                           />
@@ -627,9 +858,11 @@ export default function GameDetailPage() {
                           <Button
                             size="sm"
                             variant="danger-soft"
+                            className="min-h-11"
+                            isDisabled={pending}
                             onPress={() => setRemoveTarget(p)}
                           >
-                            Удалить
+                            Убрать
                           </Button>
                         </div>
                       </Table.Cell>
@@ -640,6 +873,7 @@ export default function GameDetailPage() {
             </Table.Content>
           </Table.ScrollContainer>
         </Table>
+        </>
       )}
 
       <AddParticipantsModal
@@ -650,16 +884,14 @@ export default function GameDetailPage() {
         onSubmit={handleAddPlayers}
       />
 
-      <TelegramMessageModal
-        isOpen={telegramOpen}
-        game={game}
-        onClose={() => setTelegramOpen(false)}
-      />
-
       <ConfirmDialog
         isOpen={removeTarget != null}
         title="Убрать участника из игры?"
-        description={removeTarget?.player.full_name}
+        description={
+          removeTarget
+            ? `${removeTarget.player.full_name}. Отметка о приходе и оплата по этой игре тоже пропадут.`
+            : undefined
+        }
         destructive
         confirmLabel="Убрать"
         onConfirm={async () => {
@@ -667,7 +899,115 @@ export default function GameDetailPage() {
         }}
         onClose={() => setRemoveTarget(null)}
       />
+
+      <TelegramPreviewModal
+        isOpen={preview != null}
+        title={preview?.title ?? "Telegram"}
+        text={preview?.text ?? ""}
+        pending={reminderSending !== null || teamsSending}
+        onClose={() => setPreview(null)}
+        onConfirm={() => {
+          if (preview) void preview.run();
+        }}
+      />
+
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:hidden">
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="secondary"
+                className="min-h-11 flex-1"
+                isPending={reminderSending !== null}
+                isDisabled={game.status === "cancelled"}
+              >
+                Напоминание
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem onSelect={() => openReminderPreview(false)}>
+                Без QR
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => openReminderPreview(true)}>
+                С QR
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button
+            variant="secondary"
+            className="min-h-11"
+            isDisabled={game.status === "cancelled" || !canSendTeams}
+            isPending={teamsSending}
+            aria-label="Отправить составы в Telegram"
+            onPress={openTeamsPreview}
+          >
+            <Send className="size-4" />
+          </Button>
+          <Button
+            variant="primary"
+            className="min-h-11 flex-1"
+            onPress={() => setAddOpen(true)}
+          >
+            Участники
+          </Button>
+        </div>
+      </div>
     </div>
+  );
+}
+
+function teamLabel(game: GameDetail, participant: ParticipantWithPlayer): string {
+  if (!participant.team_id) return "Без команды";
+  return (
+    game.teams.find((team) => team.id === participant.team_id)?.name ??
+    "Без команды"
+  );
+}
+
+function CommitField({
+  value,
+  onCommit,
+  ariaLabel,
+  className,
+  disabled,
+  step,
+  min,
+}: {
+  value: string;
+  onCommit: (raw: string) => void;
+  ariaLabel: string;
+  className?: string;
+  disabled?: boolean;
+  step?: string;
+  min?: string;
+}) {
+  const [draft, setDraft] = useState(value);
+  const focused = useRef(false);
+
+  useEffect(() => {
+    if (!focused.current) setDraft(value);
+  }, [value]);
+
+  return (
+    <Input
+      type="number"
+      inputMode="decimal"
+      aria-label={ariaLabel}
+      className={`h-11 ${className ?? ""}`}
+      variant="secondary"
+      step={step}
+      min={min}
+      disabled={disabled}
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onFocus={() => {
+        focused.current = true;
+      }}
+      onBlur={() => {
+        focused.current = false;
+        if (draft !== value) onCommit(draft);
+      }}
+    />
   );
 }
 
@@ -682,7 +1022,7 @@ function DetailRow({
 }) {
   return (
     <div className={className}>
-      <dt className="text-xs uppercase tracking-wide text-muted">{label}</dt>
+      <dt className="text-sm text-muted">{label}</dt>
       <dd className="mt-0.5 text-sm">{children}</dd>
     </div>
   );
@@ -704,7 +1044,7 @@ function StatItem({ label, value, tone = "default", hint }: StatItemProps) {
         : "text-foreground";
   return (
     <div>
-      <div className="text-xs uppercase tracking-wide text-muted">{label}</div>
+      <div className="text-sm text-muted">{label}</div>
       <div className={`text-base font-semibold ${toneClass}`}>{value}</div>
       {hint && <div className="text-xs text-accent">{hint}</div>}
     </div>

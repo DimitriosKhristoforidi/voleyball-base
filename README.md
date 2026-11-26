@@ -23,8 +23,8 @@ src/
     ui/        Thin compound-API wrappers: AppModal, AppSelect, AppCheckbox, AppSwitch, AppField
     players/   PlayerFormModal
     venues/    VenueFormModal
-    games/     GameFormModal, AddParticipantsModal, TelegramMessageModal
-  lib/         supabase client, date helpers, telegramMessage, auth context
+    games/     GameFormModal, AddParticipantsModal, TeamsBoard
+  lib/         supabase client, date helpers, auth context
   pages/       Dashboard, Players, Venues, Games, GameDetail, Login
   services/    playersService, venuesService, gamesService
   styles/      Tailwind v4 entry (@import "tailwindcss"; @import "@heroui/styles";)

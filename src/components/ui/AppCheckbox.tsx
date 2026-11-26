@@ -10,6 +10,8 @@ interface AppCheckboxProps {
   ariaLabel?: string;
   size?: "sm" | "md" | "lg";
   className?: string;
+  /** Expands the press area to about 44px without growing the box. */
+  touch?: boolean;
 }
 
 /** Checkbox with an optional inline label. */
@@ -20,6 +22,7 @@ export function AppCheckbox({
   label,
   ariaLabel,
   className,
+  touch,
 }: AppCheckboxProps) {
   const id = useId();
   return (
@@ -30,6 +33,11 @@ export function AppCheckbox({
         onCheckedChange={(v) => onChange(v === true)}
         disabled={isDisabled}
         aria-label={!label ? ariaLabel : undefined}
+        className={
+          touch
+            ? "relative before:absolute before:-inset-3 before:content-['']"
+            : undefined
+        }
       />
       {label && (
         <Label htmlFor={id} className="cursor-pointer font-normal">
